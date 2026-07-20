@@ -19,15 +19,6 @@ event zeek_init()
         ep$src_port,
         ep$dst_port);
 
-    local enrichment = mms_enrichment_fields();
-    print fmt("enrichment-present=%s,%s,%s,%s,%s,%s",
-        enrichment?$src_mac,
-        enrichment?$dst_mac,
-        enrichment?$src_ip_seen,
-        enrichment?$src_mac_seen,
-        enrichment?$mms_ip_pair_seen,
-        enrichment?$mms_full_pair_seen);
-
     local outcome = mms_outcome_fields();
     print fmt("outcome=%s,%s,%s,%s,%s",
         outcome$result,

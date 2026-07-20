@@ -1,11 +1,26 @@
 # @TEST-EXEC: zeek -b "$PACKAGE/../plugin/scripts/__preload__.zeek" "$PACKAGE/../plugin/scripts/events.zeek" "$PACKAGE/main.zeek" %INPUT > zeek.stdout 2> zeek.stderr
 # @TEST-EXEC: check-mms-log-contract exists mms.log
-# @TEST-EXEC: check-mms-log-contract fields mms.log ts uid id.orig_h id.orig_p id.resp_h id.resp_p src_ip dst_ip src_port dst_port src_mac dst_mac src_ip_seen src_mac_seen mms_ip_pair_seen mms_full_pair_seen deviceVendor deviceModel deviceRevision protocolVersion parameterCBB servicesSupported
-# @TEST-EXEC: check-mms-log-contract empty mms.log src_mac dst_mac src_ip_seen src_mac_seen mms_ip_pair_seen mms_full_pair_seen
+# @TEST-EXEC: check-mms-log-contract fields mms.log ts uid id.orig_h id.orig_p id.resp_h id.resp_p src_ip dst_ip src_port dst_port deviceVendor deviceModel deviceRevision protocolVersion parameterCBB servicesSupported
 # @TEST-EXEC: zeek-cut src_ip dst_ip src_port dst_port < mms.log > endpoints.out
 # @TEST-EXEC: btest-diff endpoints.out
-# @TEST-EXEC: zeek-cut src_mac dst_mac src_ip_seen src_mac_seen mms_ip_pair_seen mms_full_pair_seen < mms.log > enrichment.out
-# @TEST-EXEC: btest-diff enrichment.out
+# @TEST-EXEC-FAIL: check-mms-log-contract fields mms.log src_mac 2> no-src-mac.err
+# @TEST-EXEC: cat no-src-mac.err > no-src-mac.out
+# @TEST-EXEC: btest-diff no-src-mac.out
+# @TEST-EXEC-FAIL: check-mms-log-contract fields mms.log dst_mac 2> no-dst-mac.err
+# @TEST-EXEC: cat no-dst-mac.err > no-dst-mac.out
+# @TEST-EXEC: btest-diff no-dst-mac.out
+# @TEST-EXEC-FAIL: check-mms-log-contract fields mms.log src_ip_seen 2> no-src-ip-seen.err
+# @TEST-EXEC: cat no-src-ip-seen.err > no-src-ip-seen.out
+# @TEST-EXEC: btest-diff no-src-ip-seen.out
+# @TEST-EXEC-FAIL: check-mms-log-contract fields mms.log src_mac_seen 2> no-src-mac-seen.err
+# @TEST-EXEC: cat no-src-mac-seen.err > no-src-mac-seen.out
+# @TEST-EXEC: btest-diff no-src-mac-seen.out
+# @TEST-EXEC-FAIL: check-mms-log-contract fields mms.log mms_ip_pair_seen 2> no-mms-ip-pair-seen.err
+# @TEST-EXEC: cat no-mms-ip-pair-seen.err > no-mms-ip-pair-seen.out
+# @TEST-EXEC: btest-diff no-mms-ip-pair-seen.out
+# @TEST-EXEC-FAIL: check-mms-log-contract fields mms.log mms_full_pair_seen 2> no-mms-full-pair-seen.err
+# @TEST-EXEC: cat no-mms-full-pair-seen.err > no-mms-full-pair-seen.out
+# @TEST-EXEC: btest-diff no-mms-full-pair-seen.out
 # @TEST-EXEC-FAIL: check-mms-log-contract fields mms.log invoke_id 2> no-invoke-id.err
 # @TEST-EXEC: cat no-invoke-id.err > no-invoke-id.out
 # @TEST-EXEC: btest-diff no-invoke-id.out

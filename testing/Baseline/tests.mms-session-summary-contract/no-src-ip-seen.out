@@ -1,0 +1,1 @@
+check-mms-log-contract: missing field 'src_ip_seen' in mms.log

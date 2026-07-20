@@ -1,5 +1,4 @@
 endpoint=192.168.1.10,192.168.1.20,12000/tcp,102/tcp
-enrichment-present=F,F,F,F,F,F
 outcome=success,none,F,ok,none
 partial-outcome=partial,request_response_unmatched
 parse-status-values=T,T,T,T,F

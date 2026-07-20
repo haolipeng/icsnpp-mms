@@ -15,12 +15,6 @@ export {
         dst_ip:               addr    &log;
         src_port:             port    &log;
         dst_port:             port    &log;
-        src_mac:              string  &log &optional;
-        dst_mac:              string  &log &optional;
-        src_ip_seen:          bool    &log &optional;
-        src_mac_seen:         bool    &log &optional;
-        mms_ip_pair_seen:     bool    &log &optional;
-        mms_full_pair_seen:   bool    &log &optional;
         deviceVendor:         string &log &optional;
         deviceModel:          string &log &optional;
         deviceRevision:       string &log &optional;
@@ -44,7 +38,6 @@ export {
 function get_info(c: connection): Info {
     if(!c?$mms_info) {
         local endpoint_fields = mms_endpoint_fields(c$id);
-        local enrichment = mms_enrichment_fields();
         c$mms_info = [
             $ts=network_time(),
             $uid=c$uid,
@@ -54,19 +47,6 @@ function get_info(c: connection): Info {
             $src_port=endpoint_fields$src_port,
             $dst_port=endpoint_fields$dst_port
         ];
-
-        if ( enrichment?$src_mac )
-            c$mms_info$src_mac = enrichment$src_mac;
-        if ( enrichment?$dst_mac )
-            c$mms_info$dst_mac = enrichment$dst_mac;
-        if ( enrichment?$src_ip_seen )
-            c$mms_info$src_ip_seen = enrichment$src_ip_seen;
-        if ( enrichment?$src_mac_seen )
-            c$mms_info$src_mac_seen = enrichment$src_mac_seen;
-        if ( enrichment?$mms_ip_pair_seen )
-            c$mms_info$mms_ip_pair_seen = enrichment$mms_ip_pair_seen;
-        if ( enrichment?$mms_full_pair_seen )
-            c$mms_info$mms_full_pair_seen = enrichment$mms_full_pair_seen;
     }
     return c$mms_info;
 }

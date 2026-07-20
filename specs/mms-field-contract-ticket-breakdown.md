@@ -28,12 +28,11 @@
 
 **Blocked by**：None，可以立即开始
 
-**What it delivers**：提供一组可复用的字段填充函数，用来统一生成端点字段、富化占位字段、结果字段、错误字段、解析状态字段和高风险操作字段，后续所有 MMS 业务日志复用这套逻辑。
+**What it delivers**：提供一组可复用的字段填充函数，用来统一生成端点字段、结果字段、错误字段、解析状态字段和高风险操作字段，后续所有 MMS 业务日志复用这套逻辑。
 
 **Acceptance criteria**
 
 - [ ] helper 能生成 `src_ip`、`dst_ip`、`src_port`、`dst_port`。
-- [ ] helper 能生成 `src_mac`、`dst_mac`、`src_ip_seen`、`src_mac_seen`、`mms_ip_pair_seen`、`mms_full_pair_seen` 的空值或占位值。
 - [ ] helper 能生成 `result`、`error_code`、`diag`、`parse_status`、`parse_error` 的默认值。
 - [ ] helper 能基于规范化 `operation` 的静态集合计算 `is_high_risk_operation`。
 
@@ -66,12 +65,12 @@
 
 **Blocked by**：1、2
 
-**What it delivers**：MMS 会话摘要日志输出项目端点字段、MAC 占位字段和基线事实占位字段；它仍然是会话级日志，不承载逐操作字段。
+**What it delivers**：MMS 会话摘要日志输出项目端点字段；它仍然是会话级日志，不承载逐操作字段，也不承载通信关系层的 MAC 或基线事实判断字段。
 
 **Acceptance criteria**
 
 - [ ] MMS 会话摘要日志包含 `src_ip`、`dst_ip`、`src_port`、`dst_port`。
-- [ ] MMS 会话摘要日志包含 `src_mac`、`dst_mac` 和基线事实占位字段。
+- [ ] `src_mac`、`dst_mac`、`src_ip_seen`、`src_mac_seen`、`mms_ip_pair_seen`、`mms_full_pair_seen` 不进入 MMS 会话摘要日志首批契约，后续由通信关系/基线富化层负责。
 - [ ] 不要求 MMS 会话摘要日志输出 `invoke_id` 或 `object_path`。
 
 ### 5. MMS 会话摘要日志输出 result/error/parse 状态字段
