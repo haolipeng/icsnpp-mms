@@ -25,6 +25,26 @@ export {
         parse_error:   string;
     };
 
+    # Parse status is the coarse parsing quality level. Parse error is the
+    # concrete reason that explains a non-ok or non-applicable status.
+    const mms_parse_status_values: set[string] = {
+        "ok",
+        "partial",
+        "failed",
+        "not_applicable"
+    };
+
+    const mms_parse_error_values: set[string] = {
+        "none",
+        "mms_parse_error",
+        "mms_constraint_error",
+        "pres_parse_error",
+        "request_response_unmatched",
+        "file_handle_unmatched",
+        "iso_stack_incomplete",
+        "unknown_parse_error"
+    };
+
     const mms_high_risk_operations: set[string] = {
         "write",
         "file_open",
@@ -69,6 +89,12 @@ function mms_outcome_fields(
     parse_status: string &default="ok",
     parse_error: string &default="none"
 ): MMS_OutcomeFields {
+    if ( parse_status !in mms_parse_status_values )
+        Reporter::fatal(fmt("invalid MMS parse_status: %s", parse_status));
+
+    if ( parse_error !in mms_parse_error_values )
+        Reporter::fatal(fmt("invalid MMS parse_error: %s", parse_error));
+
     local fields: MMS_OutcomeFields = [
         $result=result,
         $error_code=error_code,

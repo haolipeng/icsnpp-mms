@@ -36,6 +36,34 @@ event zeek_init()
         outcome$parse_status,
         outcome$parse_error);
 
+    local partial_outcome = mms_outcome_fields(
+        "unknown",
+        "none",
+        "",
+        "partial",
+        "request_response_unmatched");
+    print fmt("partial-outcome=%s,%s",
+        partial_outcome$parse_status,
+        partial_outcome$parse_error);
+
+    print fmt("parse-status-values=%s,%s,%s,%s,%s",
+        "ok" in mms_parse_status_values,
+        "partial" in mms_parse_status_values,
+        "failed" in mms_parse_status_values,
+        "not_applicable" in mms_parse_status_values,
+        "unknown" in mms_parse_status_values);
+
+    print fmt("parse-error-values=%s,%s,%s,%s,%s,%s,%s,%s,%s",
+        "none" in mms_parse_error_values,
+        "mms_parse_error" in mms_parse_error_values,
+        "mms_constraint_error" in mms_parse_error_values,
+        "pres_parse_error" in mms_parse_error_values,
+        "request_response_unmatched" in mms_parse_error_values,
+        "file_handle_unmatched" in mms_parse_error_values,
+        "iso_stack_incomplete" in mms_parse_error_values,
+        "unknown_parse_error" in mms_parse_error_values,
+        "unknown" in mms_parse_error_values);
+
     print fmt("risk=%s,%s",
         mms_is_high_risk_operation("write"),
         mms_is_high_risk_operation("read"));
