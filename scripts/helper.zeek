@@ -1,5 +1,91 @@
 module mms;
 
+export {
+    type MMS_EndpointFields: record {
+        src_ip:    addr;
+        dst_ip:    addr;
+        src_port:  port;
+        dst_port:  port;
+    };
+
+    type MMS_EnrichmentFields: record {
+        src_mac:             string &optional;
+        dst_mac:             string &optional;
+        src_ip_seen:         bool   &optional;
+        src_mac_seen:        bool   &optional;
+        mms_ip_pair_seen:    bool   &optional;
+        mms_full_pair_seen:  bool   &optional;
+    };
+
+    type MMS_OutcomeFields: record {
+        result:        string;
+        error_code:    string;
+        diag:          string &optional;
+        parse_status:  string;
+        parse_error:   string;
+    };
+
+    const mms_high_risk_operations: set[string] = {
+        "write",
+        "file_open",
+        "file_delete",
+        "obtain_file",
+        "start",
+        "stop",
+        "reset",
+        "kill"
+    } &redef;
+
+    global mms_endpoint_fields: function(id: conn_id): MMS_EndpointFields;
+    global mms_enrichment_fields: function(): MMS_EnrichmentFields;
+    global mms_outcome_fields: function(
+        result: string &default="success",
+        error_code: string &default="none",
+        diag: string &default="",
+        parse_status: string &default="ok",
+        parse_error: string &default="none"
+    ): MMS_OutcomeFields;
+    global mms_is_high_risk_operation: function(operation: string): bool;
+}
+
+function mms_endpoint_fields(id: conn_id): MMS_EndpointFields {
+    return [
+        $src_ip=id$orig_h,
+        $dst_ip=id$resp_h,
+        $src_port=id$orig_p,
+        $dst_port=id$resp_p
+    ];
+}
+
+function mms_enrichment_fields(): MMS_EnrichmentFields {
+    local fields: MMS_EnrichmentFields = [];
+    return fields;
+}
+
+function mms_outcome_fields(
+    result: string &default="success",
+    error_code: string &default="none",
+    diag: string &default="",
+    parse_status: string &default="ok",
+    parse_error: string &default="none"
+): MMS_OutcomeFields {
+    local fields: MMS_OutcomeFields = [
+        $result=result,
+        $error_code=error_code,
+        $parse_status=parse_status,
+        $parse_error=parse_error
+    ];
+
+    if ( |diag| > 0 )
+        fields$diag = diag;
+
+    return fields;
+}
+
+function mms_is_high_risk_operation(operation: string): bool {
+    return operation in mms_high_risk_operations;
+}
+
 function remove_ns(val: string): string {
     local parts = split_string(val, /::/);
     local len = |parts|;
