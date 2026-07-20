@@ -1,9 +1,12 @@
 #! /bin/sh
 #
-# BTest helper for getting values for Zeek-related environment variables.
+# btest 辅助脚本：按当前 Zeek 环境生成测试所需的 Zeek 相关环境变量。
 
 # shellcheck disable=SC2002
 base="$(dirname "$0")"
+
+# 如果本插件是基于 Zeek 源码树构建的，CMakeCache.txt 中会记录 ZEEK_DIST。
+# 有这个值时优先使用源码树中的 zeek、btest 和 zeek-cut 工具。
 zeek_dist=$(cat "${base}/../../build/CMakeCache.txt" 2>/dev/null | grep ZEEK_DIST | cut -d = -f 2)
 
 if [ -n "${zeek_dist}" ]; then
@@ -18,7 +21,7 @@ if [ -n "${zeek_dist}" ]; then
         exit 1
     fi
 else
-    # Use Zeek installation for testing. In this case zeek-config must be in PATH.
+    # 没有源码树信息时，使用系统已安装的 Zeek；此时 PATH 中必须能找到 zeek-config。
     if ! which zeek-config >/dev/null 2>&1; then
         echo "zeek-config not found" >&2
         exit 1
@@ -27,12 +30,12 @@ else
     if [ "$1" = "zeekpath" ]; then
         zeek-config --zeekpath
     elif [ "$1" = "zeek_plugin_path" ]; then
-        # Combine the local tree and the system-wide path. This allows
-        # us to test on a local build or an installation made via zkg,
-        # which squirrels away the build.
+        # 合并本地 build 目录、系统插件目录和 zkg 用户插件目录。
+        # 这样本地构建和通过 zkg 安装的插件布局都能被 btest 找到。
         echo "$(cd "${base}/../.." && pwd)/build:$(zeek-config --plugin_dir):$(zkg --user config plugin_dir)"
     elif [ "$1" = "path" ]; then
-        echo "${PATH}"
+        # 把 testing/Scripts 放进 PATH，方便 btest 直接调用仓库内的测试辅助脚本。
+        echo "${base}:${PATH}"
     else
         echo "usage: $(basename "$0") <var>" >&2
         exit 1

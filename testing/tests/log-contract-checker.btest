@@ -1,0 +1,27 @@
+# @TEST-EXEC: printf '#separator \\x09\n#set_separator\t,\n#empty_field\t(empty)\n#unset_field\t-\n#path\tmms_sample\n#open\t2026-07-20-00-00-00\n#fields\tts\tuid\tsrc_ip\tresult\tparse_status\tdirection\toptional_context\n#types\ttime\tstring\taddr\tstring\tstring\tstring\tstring\n1784592000.000000\tC1\t192.0.2.10\tsuccess\tok\torig_to_resp\t-\n1784592001.000000\tC2\t192.0.2.11\tfailure\tpartial\tresp_to_orig\t-\n#close\t2026-07-20-00-00-01\n' > mms_sample.log
+# @TEST-EXEC: check-mms-log-contract exists mms_sample.log
+# @TEST-EXEC: check-mms-log-contract fields mms_sample.log ts uid src_ip result parse_status direction optional_context
+# @TEST-EXEC: check-mms-log-contract enum mms_sample.log result success failure unknown not_applicable
+# @TEST-EXEC: check-mms-log-contract enum mms_sample.log parse_status ok partial failed not_applicable
+# @TEST-EXEC: check-mms-log-contract enum mms_sample.log direction orig_to_resp resp_to_orig unknown not_applicable
+# @TEST-EXEC: check-mms-log-contract empty mms_sample.log optional_context
+# @TEST-EXEC: echo 'contract checks passed' > output
+# @TEST-EXEC: btest-diff output
+
+# @TEST-EXEC-FAIL: check-mms-log-contract exists missing.log 2> missing.err
+# @TEST-EXEC: cat missing.err > missing.out
+# @TEST-EXEC: btest-diff missing.out
+
+# @TEST-EXEC-FAIL: check-mms-log-contract fields mms_sample.log missing_field 2> missing-field.err
+# @TEST-EXEC: cat missing-field.err > missing-field.out
+# @TEST-EXEC: btest-diff missing-field.out
+
+# @TEST-EXEC: printf '#separator \\x09\n#set_separator\t,\n#empty_field\t(empty)\n#unset_field\t-\n#path\tmms_bad_enum\n#open\t2026-07-20-00-00-00\n#fields\tts\tresult\n#types\ttime\tstring\n1784592000.000000\tmaybe\n#close\t2026-07-20-00-00-01\n' > mms_bad_enum.log
+# @TEST-EXEC-FAIL: check-mms-log-contract enum mms_bad_enum.log result success failure unknown not_applicable 2> bad-enum.err
+# @TEST-EXEC: cat bad-enum.err > bad-enum.out
+# @TEST-EXEC: btest-diff bad-enum.out
+
+# @TEST-EXEC: printf '#separator \\x09\n#set_separator\t,\n#empty_field\t(empty)\n#unset_field\t-\n#path\tmms_bad_empty\n#open\t2026-07-20-00-00-00\n#fields\tts\toptional_context\n#types\ttime\tstring\n1784592000.000000\tunknown\n#close\t2026-07-20-00-00-01\n' > mms_bad_empty.log
+# @TEST-EXEC-FAIL: check-mms-log-contract empty mms_bad_empty.log optional_context 2> bad-empty.err
+# @TEST-EXEC: cat bad-empty.err > bad-empty.out
+# @TEST-EXEC: btest-diff bad-empty.out

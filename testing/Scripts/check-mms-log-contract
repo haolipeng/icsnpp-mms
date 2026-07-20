@@ -1,0 +1,148 @@
+#!/bin/sh
+
+# 可复用的 btest 辅助脚本，用来检查生成的 Zeek ASCII 日志是否符合
+# 后续 MMS 字段契约 ticket 需要的约定。
+
+set -eu
+
+usage() {
+    cat >&2 <<'EOF'
+Usage:
+  check-mms-log-contract exists <log>
+  check-mms-log-contract fields <log> <field>...
+  check-mms-log-contract enum <log> <field> <allowed-value>...
+  check-mms-log-contract empty <log> <field>...
+EOF
+    exit 2
+}
+
+fail() {
+    echo "check-mms-log-contract: $*" >&2
+    exit 1
+}
+
+require_log() {
+    log=$1
+    [ -f "$log" ] || fail "log file does not exist: $log"
+    [ -s "$log" ] || fail "log file is empty: $log"
+}
+
+require_zeek_cut() {
+    command -v zeek-cut >/dev/null 2>&1 || fail "zeek-cut is not in PATH"
+}
+
+field_exists() {
+    log=$1
+    field=$2
+
+    # 某些 Zeek 版本中，zeek-cut 遇到缺失列也可能静默成功。
+    # 因此先显式检查 #fields 头，再交给 zeek-cut 验证字段可提取。
+    awk -v field="$field" '
+        BEGIN { FS = "\t" }
+        $1 == "#fields" {
+            for ( i = 2; i <= NF; ++i )
+                if ( $i == field )
+                    found = 1
+        }
+        END { exit found ? 0 : 1 }
+    ' "$log"
+}
+
+check_fields() {
+    log=$1
+    shift
+
+    [ "$#" -gt 0 ] || usage
+    require_zeek_cut
+
+    for field in "$@"; do
+        if ! field_exists "$log" "$field"; then
+            fail "missing field '$field' in $log"
+        fi
+
+        if ! zeek-cut "$field" < "$log" >/dev/null 2>&1; then
+            fail "zeek-cut could not extract field '$field' from $log"
+        fi
+    done
+}
+
+check_enum() {
+    log=$1
+    field=$2
+    shift 2
+
+    [ "$#" -gt 0 ] || usage
+    require_zeek_cut
+    check_fields "$log" "$field"
+
+    # 允许值按字面量传入。构造 awk 正则前先转义元字符，避免枚举值被
+    # 当作正则语法解释。
+    allowed_pattern=$(printf '%s\n' "$@" | awk '
+        function escape_re(value) {
+            gsub(/[][(){}.^$*+?|\\]/, "\\\\&", value)
+            return value
+        }
+        {
+            escaped = escape_re($0)
+            pattern = pattern sep escaped
+            sep = "|"
+        }
+        END { print "^(" pattern ")$" }
+    ')
+
+    zeek-cut "$field" < "$log" | awk -v field="$field" -v logfile="$log" -v allowed="$allowed_pattern" '
+        $0 !~ allowed {
+            printf("check-mms-log-contract: invalid enum value for %s in %s: %s\n", field, logfile, $0) > "/dev/stderr"
+            exit 1
+        }
+    '
+}
+
+check_empty() {
+    log=$1
+    shift
+
+    [ "$#" -gt 0 ] || usage
+    require_zeek_cut
+    check_fields "$log" "$@"
+
+    # 当测试期望某字段在每一行都为空时使用此检查。Zeek ASCII 日志用
+    # 标准标记区分未设置的可选值和空字符串，这两种表达在这里都视为空值。
+    for field in "$@"; do
+        zeek-cut "$field" < "$log" | awk -v field="$field" -v logfile="$log" '
+            $0 != "-" && $0 != "(empty)" {
+                printf("check-mms-log-contract: non-empty value for %s in %s: %s\n", field, logfile, $0) > "/dev/stderr"
+                exit 1
+            }
+        '
+    done
+}
+
+[ "$#" -ge 2 ] || usage
+
+command_name=$1
+log=$2
+shift 2
+
+case "$command_name" in
+    exists)
+        [ "$#" -eq 0 ] || usage
+        require_log "$log"
+        ;;
+    fields)
+        require_log "$log"
+        check_fields "$log" "$@"
+        ;;
+    enum)
+        [ "$#" -ge 2 ] || usage
+        require_log "$log"
+        check_enum "$log" "$@"
+        ;;
+    empty)
+        require_log "$log"
+        check_empty "$log" "$@"
+        ;;
+    *)
+        usage
+        ;;
+esac

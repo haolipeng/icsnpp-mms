@@ -5,3 +5,14 @@ of the installation. Take a look at the folder reported via
   zeek-config --btest_tools_dir
 
 for scripts, PRNG seeds, and pcaps you might be able to reuse.
+
+MMS log contract checks:
+
+  check-mms-log-contract exists <log>
+  check-mms-log-contract fields <log> <field>...
+  check-mms-log-contract enum <log> <field> <allowed-value>...
+  check-mms-log-contract empty <log> <field>...
+
+Use these from btest cases after a Zeek run generates logs. The `fields`,
+`enum`, and `empty` commands read Zeek ASCII logs with `zeek-cut`; `empty`
+accepts Zeek's standard unset (`-`) and empty string (`(empty)`) markers.
