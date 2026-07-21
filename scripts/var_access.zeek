@@ -288,6 +288,8 @@ event VariableListWriteResponseError(c: connection, direction: string, invokeID:
 # =====================================================================
 # 单变量 / 变量列表：Unconfirmed informationReport 上报 → 各自日志
 # =====================================================================
+# InformationReport 属于 Unconfirmed MMS 流量，协议层没有 invoke ID。
+# 因此这些日志记录刻意不设置 invoke_id，用空值表达该协议事实。
 event VariableReport(c: connection, direction: string, name: ObjectName, data: Data) {
 
     if(!log_var_access) return;
