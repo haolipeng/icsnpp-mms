@@ -52,12 +52,12 @@ export {
     # Variable-level events: raised when a variable (or variable list) is read,
     # written, or reported; several such events can arise from one PDU
     # =====================================================================
-    global VariableReadRequest: event(c: connection, direction: string, name: ObjectName);
-    global VariableListReadRequest: event(c: connection, direction: string, listname: ObjectName);
-    global VariableReadResponse: event(c: connection, direction: string, name: ObjectName, data: Data);
-    global VariableReadResponseError: event(c: connection, direction: string, name: ObjectName, error: DataAccessError);
-    global VariableListReadResponse: event(c: connection, direction: string, listname: ObjectName, listindex: count, data: Data);
-    global VariableListReadResponseError: event(c: connection, direction: string, listname: ObjectName, listindex: count, error: DataAccessError);
+    global VariableReadRequest: event(c: connection, direction: string, invokeID: int, name: ObjectName);
+    global VariableListReadRequest: event(c: connection, direction: string, invokeID: int, listname: ObjectName);
+    global VariableReadResponse: event(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data);
+    global VariableReadResponseError: event(c: connection, direction: string, invokeID: int, name: ObjectName, error: DataAccessError);
+    global VariableListReadResponse: event(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, data: Data);
+    global VariableListReadResponseError: event(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, error: DataAccessError);
 
     global VariableWriteRequest: event(c: connection, direction: string, name: ObjectName, data: Data);
     global VariableListWriteRequest: event(c: connection, direction: string, listname: ObjectName, data: Data);
@@ -239,12 +239,12 @@ event readRequest(c: connection, direction: string, invokeID: int, pdu: Read_Req
     # 读取多个独立变量
     if (pdu $ variableAccessSpecificatn ?$ listOfVariable) {
         for (i in pdu $ variableAccessSpecificatn $ listOfVariable) {
-            event VariableReadRequest(c, direction, pdu $ variableAccessSpecificatn $ listOfVariable[i] $ variableSpecification $ name);
+            event VariableReadRequest(c, direction, invokeID, pdu $ variableAccessSpecificatn $ listOfVariable[i] $ variableSpecification $ name);
         }
     }
     # 读取变量列表
     if (pdu $ variableAccessSpecificatn ?$ variableListName) {
-        event VariableListReadRequest(c, direction, pdu $ variableAccessSpecificatn $ variableListName);
+        event VariableListReadRequest(c, direction, invokeID, pdu $ variableAccessSpecificatn $ variableListName);
     }
 }
 
@@ -270,9 +270,9 @@ event readResponse(c: connection, direction: string, invokeID: int, pdu: Read_Re
             # 是，取第 i 个变量名 name
             name = vas $ listOfVariable[i] $ variableSpecification $ name;
             if ( pdu $ listOfAccessResult[i] ?$ success) {
-                 event VariableReadResponse(c, direction, name, pdu $ listOfAccessResult[i] $ success);
+                 event VariableReadResponse(c, direction, invokeID, name, pdu $ listOfAccessResult[i] $ success);
             } else {
-                 event VariableReadResponseError(c, direction, name, pdu $ listOfAccessResult[i] $ failure);
+                 event VariableReadResponseError(c, direction, invokeID, name, pdu $ listOfAccessResult[i] $ failure);
             }
         } else {
             # 否（vas 无 listOfVariable），按 variableListName 路径处理
@@ -280,9 +280,9 @@ event readResponse(c: connection, direction: string, invokeID: int, pdu: Read_Re
             name = vas $ variableListName;
             # 判断第i个读结果是成功还是失败
             if ( pdu $ listOfAccessResult[i] ?$ success) {
-                 event VariableListReadResponse(c, direction, name, i, pdu $ listOfAccessResult[i] $ success);
+                 event VariableListReadResponse(c, direction, invokeID, name, i, pdu $ listOfAccessResult[i] $ success);
             } else {
-                 event VariableListReadResponseError(c, direction, name, i, pdu $ listOfAccessResult[i] $ failure);
+                 event VariableListReadResponseError(c, direction, invokeID, name, i, pdu $ listOfAccessResult[i] $ failure);
             }
         }
     }

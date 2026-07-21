@@ -1,0 +1,3 @@
+read_request	LD0::ST	-	T	-	77
+read	LD0::ST	{"type": "visible_string", "value": "cached-value"}	T	-	77
+read	LD0::MX	-	F	DataAccessError_object_access_denied	88

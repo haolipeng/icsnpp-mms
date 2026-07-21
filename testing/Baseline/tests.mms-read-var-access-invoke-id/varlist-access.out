@@ -1,0 +1,2 @@
+read_request	datasetA	0	-	T	-	99
+read	datasetA	0	{"type": "boolean", "value": "T"}	T	-	99

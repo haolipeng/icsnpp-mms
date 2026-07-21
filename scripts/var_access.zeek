@@ -16,6 +16,7 @@ export {
         value:     string   &log &optional;
         success:   bool     &log;
         diag:      string   &log &optional;
+        invoke_id: int      &log &optional;
     };
 
     # 变量列表一项一条记录 → mms_varlist_access.log
@@ -29,6 +30,7 @@ export {
         value:     string   &log &optional;
         success:   bool     &log;
         diag:      string   &log &optional;
+        invoke_id: int      &log &optional;
     };
 
     # 声明两条日志 event，供 zeek_init 里 Log::create_stream 的 $ev 绑定（不是 MMS 协议事件）：
@@ -57,7 +59,24 @@ event zeek_init() &priority=5
 # =====================================================================
 # 单变量：Confirmed 读/写响应（成功/失败）→ mms_var_access.log
 # =====================================================================
-event VariableReadResponse(c: connection, direction: string, name: ObjectName, data: Data) {
+event VariableReadRequest(c: connection, direction: string, invokeID: int, name: ObjectName) {
+
+    if(!log_var_access) return;
+
+    local rec: VariableAccess = [
+        $ts=network_time(),
+        $uid=c$uid,
+        $id=c$id,
+        $operation="read_request",
+        $variable=objectName_to_string(name),
+        $success=T,
+        $invoke_id=invokeID
+    ];
+
+    Log::write(LOG_VAR_ACCESS, rec);
+}
+
+event VariableReadResponse(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data) {
 
     if(!log_var_access) return;
 
@@ -68,7 +87,8 @@ event VariableReadResponse(c: connection, direction: string, name: ObjectName, d
         $operation="read",
         $variable=objectName_to_string(name),
         $value=data_to_string(data),
-        $success=T
+        $success=T,
+        $invoke_id=invokeID
     ];
 
     Log::write(LOG_VAR_ACCESS, rec);
@@ -91,7 +111,7 @@ event VariableWriteResponse(c: connection, direction: string, name: ObjectName, 
     Log::write(LOG_VAR_ACCESS, rec);
 }
 
-event VariableReadResponseError(c: connection, direction: string, name: ObjectName, error: DataAccessError) {
+event VariableReadResponseError(c: connection, direction: string, invokeID: int, name: ObjectName, error: DataAccessError) {
 
     if(!log_var_access) return;
 
@@ -102,7 +122,8 @@ event VariableReadResponseError(c: connection, direction: string, name: ObjectNa
         $operation="read",
         $variable=objectName_to_string(name),
         $success=F,
-        $diag=remove_ns(cat(error))
+        $diag=remove_ns(cat(error)),
+        $invoke_id=invokeID
     ];
 
     Log::write(LOG_VAR_ACCESS, rec);
@@ -130,7 +151,25 @@ event VariableWriteResponseError(c: connection, direction: string, name: ObjectN
 # =====================================================================
 # 变量列表：Confirmed 读/写响应（成功 / 失败）→ mms_varlist_access.log
 # =====================================================================
-event VariableListReadResponse(c: connection, direction: string, listname: ObjectName, listindex: count, data: Data) {
+event VariableListReadRequest(c: connection, direction: string, invokeID: int, listname: ObjectName) {
+
+    if(!log_var_access) return;
+
+    local rec: VariableListAccess = [
+        $ts=network_time(),
+        $uid=c$uid,
+        $id=c$id,
+        $operation="read_request",
+        $listname=objectName_to_string(listname),
+        $listindex=0,
+        $success=T,
+        $invoke_id=invokeID
+    ];
+
+    Log::write(LOG_VARLIST_ACCESS, rec);
+}
+
+event VariableListReadResponse(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, data: Data) {
 
     if(!log_var_access) return;
 
@@ -142,13 +181,14 @@ event VariableListReadResponse(c: connection, direction: string, listname: Objec
         $listname=objectName_to_string(listname),
         $listindex=listindex,
         $value=data_to_string(data),
-        $success=T
+        $success=T,
+        $invoke_id=invokeID
     ];
 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
 
-event VariableListReadResponseError(c: connection, direction: string, listname: ObjectName, listindex: count, error: DataAccessError) {
+event VariableListReadResponseError(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, error: DataAccessError) {
 
     if(!log_var_access) return;
 
@@ -160,7 +200,8 @@ event VariableListReadResponseError(c: connection, direction: string, listname: 
         $listname=objectName_to_string(listname),
         $listindex=listindex,
         $success=F,
-        $diag=remove_ns(cat(error))
+        $diag=remove_ns(cat(error)),
+        $invoke_id=invokeID
     ];
 
     Log::write(LOG_VARLIST_ACCESS, rec);
