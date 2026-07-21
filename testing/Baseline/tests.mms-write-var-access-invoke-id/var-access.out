@@ -1,0 +1,4 @@
+write_request	LD0::ST	{"type": "visible_string", "value": "write-value"}	T	-	111
+write	LD0::ST	{"type": "visible_string", "value": "write-value"}	T	-	111
+write_request	LD0::MX	{"type": "visible_string", "value": "bad-value"}	T	-	112
+write	LD0::MX	{"type": "visible_string", "value": "bad-value"}	F	DataAccessError_object_access_denied	112

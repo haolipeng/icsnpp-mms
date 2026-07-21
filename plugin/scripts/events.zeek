@@ -59,12 +59,12 @@ export {
     global VariableListReadResponse: event(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, data: Data);
     global VariableListReadResponseError: event(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, error: DataAccessError);
 
-    global VariableWriteRequest: event(c: connection, direction: string, name: ObjectName, data: Data);
-    global VariableListWriteRequest: event(c: connection, direction: string, listname: ObjectName, data: Data);
-    global VariableWriteResponse: event(c: connection, direction: string, name: ObjectName, data: Data);
-    global VariableWriteResponseError: event(c: connection, direction: string, name: ObjectName, data: Data, error: DataAccessError);
-    global VariableListWriteResponse: event(c: connection, direction: string, listname: ObjectName, listindex: count, data: Data);
-    global VariableListWriteResponseError: event(c: connection, direction: string, listname: ObjectName, listindex: count, data: Data, error: DataAccessError);
+    global VariableWriteRequest: event(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data);
+    global VariableListWriteRequest: event(c: connection, direction: string, invokeID: int, listname: ObjectName, data: Data);
+    global VariableWriteResponse: event(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data);
+    global VariableWriteResponseError: event(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data, error: DataAccessError);
+    global VariableListWriteResponse: event(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, data: Data);
+    global VariableListWriteResponseError: event(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, data: Data, error: DataAccessError);
 
     global VariableReport: event(c: connection, direction: string, name: ObjectName, data: Data);
     global VariableReportError: event(c: connection, direction: string, name: ObjectName, error: DataAccessError);
@@ -297,19 +297,23 @@ event writeRequest(c: connection, direction: string, invokeID: int, pdu: Write_R
     # 整份请求按 invokeID 存表（给writeResponse用）
     c $ mms_write_requests[invokeID] = pdu;
     # 当 variableAccessSpecificatn 含 listOfVariable 时，逐个触发 VariableWriteRequest
-    for (i in pdu $ variableAccessSpecificatn $ listOfVariable) {
-        event VariableWriteRequest(
-            c,
-            direction,
-            pdu $ variableAccessSpecificatn $ listOfVariable[i] $ variableSpecification $ name,
-            pdu $ listOfData[i]
-        );
+    if (pdu $ variableAccessSpecificatn ?$ listOfVariable) {
+        for (i in pdu $ variableAccessSpecificatn $ listOfVariable) {
+            event VariableWriteRequest(
+                c,
+                direction,
+                invokeID,
+                pdu $ variableAccessSpecificatn $ listOfVariable[i] $ variableSpecification $ name,
+                pdu $ listOfData[i]
+            );
+        }
     }
     # 若请求是写变量列表
     if (pdu $ variableAccessSpecificatn ?$ variableListName) {
         event VariableListWriteRequest(
             c,
             direction,
+            invokeID,
             pdu $ variableAccessSpecificatn $ variableListName,
             pdu $ listOfData[0]
         );
@@ -332,16 +336,16 @@ event writeResponse(c: connection, direction: string, invokeID: int, pdu: Write_
         if(request $ variableAccessSpecificatn ?$ listOfVariable) {
             name = request $ variableAccessSpecificatn $ listOfVariable[i] $ variableSpecification $ name;
             if(pdu[i] ?$ success) {
-                event VariableWriteResponse(c, direction, name, request $ listOfData[i]);
+                event VariableWriteResponse(c, direction, invokeID, name, request $ listOfData[i]);
             } else {
-                event VariableWriteResponseError(c, direction, name, request $ listOfData[i], pdu[i] $ failure);
+                event VariableWriteResponseError(c, direction, invokeID, name, request $ listOfData[i], pdu[i] $ failure);
             }
         } else {
             name = request $ variableAccessSpecificatn $ variableListName;
             if(pdu[i] ?$ success) {
-                event VariableListWriteResponse(c, direction, name, i, request $ listOfData[i]);
+                event VariableListWriteResponse(c, direction, invokeID, name, i, request $ listOfData[i]);
             } else {
-                event VariableListWriteResponseError(c, direction, name, i, request $ listOfData[i], pdu[i] $ failure);
+                event VariableListWriteResponseError(c, direction, invokeID, name, i, request $ listOfData[i], pdu[i] $ failure);
             }
         }
     }

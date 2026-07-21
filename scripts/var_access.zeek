@@ -94,7 +94,25 @@ event VariableReadResponse(c: connection, direction: string, invokeID: int, name
     Log::write(LOG_VAR_ACCESS, rec);
 }
 
-event VariableWriteResponse(c: connection, direction: string, name: ObjectName, data: Data) {
+event VariableWriteRequest(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data) {
+
+    if(!log_var_access) return;
+
+    local rec: VariableAccess = [
+        $ts=network_time(),
+        $uid=c$uid,
+        $id=c$id,
+        $operation="write_request",
+        $variable=objectName_to_string(name),
+        $value=data_to_string(data),
+        $success=T,
+        $invoke_id=invokeID
+    ];
+
+    Log::write(LOG_VAR_ACCESS, rec);
+}
+
+event VariableWriteResponse(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data) {
 
     if(!log_var_access) return;
 
@@ -105,7 +123,8 @@ event VariableWriteResponse(c: connection, direction: string, name: ObjectName, 
         $operation="write",
         $variable=objectName_to_string(name),
         $value=data_to_string(data),
-        $success=T
+        $success=T,
+        $invoke_id=invokeID
     ];
 
     Log::write(LOG_VAR_ACCESS, rec);
@@ -129,7 +148,7 @@ event VariableReadResponseError(c: connection, direction: string, invokeID: int,
     Log::write(LOG_VAR_ACCESS, rec);
 }
 
-event VariableWriteResponseError(c: connection, direction: string, name: ObjectName, data: Data, error: DataAccessError) {
+event VariableWriteResponseError(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data, error: DataAccessError) {
 
     if(!log_var_access) return;
 
@@ -141,7 +160,8 @@ event VariableWriteResponseError(c: connection, direction: string, name: ObjectN
         $variable=objectName_to_string(name),
         $value=data_to_string(data),
         $success=F,
-        $diag=remove_ns(cat(error))
+        $diag=remove_ns(cat(error)),
+        $invoke_id=invokeID
     ];
 
     Log::write(LOG_VAR_ACCESS, rec);
@@ -207,7 +227,25 @@ event VariableListReadResponseError(c: connection, direction: string, invokeID: 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
 
-event VariableListWriteResponse(c: connection, direction: string, listname: ObjectName, listindex: count, data: Data) {
+event VariableListWriteRequest(c: connection, direction: string, invokeID: int, listname: ObjectName, data: Data) {
+    if(!log_var_access) return;
+
+    local rec: VariableListAccess = [
+        $ts=network_time(),
+        $uid=c$uid,
+        $id=c$id,
+        $operation="write_request",
+        $listname=objectName_to_string(listname),
+        $listindex=0,
+        $value=data_to_string(data),
+        $success=T,
+        $invoke_id=invokeID
+    ];
+
+    Log::write(LOG_VARLIST_ACCESS, rec);
+}
+
+event VariableListWriteResponse(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, data: Data) {
 
     if(!log_var_access) return;
 
@@ -219,13 +257,14 @@ event VariableListWriteResponse(c: connection, direction: string, listname: Obje
         $listname=objectName_to_string(listname),
         $listindex=listindex,
         $value=data_to_string(data),
-        $success=T
+        $success=T,
+        $invoke_id=invokeID
     ];
 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
 
-event VariableListWriteResponseError(c: connection, direction: string, listname: ObjectName, listindex: count, data: Data, error: DataAccessError) {
+event VariableListWriteResponseError(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, data: Data, error: DataAccessError) {
 
     if(!log_var_access) return;
 
@@ -238,7 +277,8 @@ event VariableListWriteResponseError(c: connection, direction: string, listname:
         $listindex=listindex,
         $value=data_to_string(data),
         $success=F,
-        $diag=remove_ns(cat(error))
+        $diag=remove_ns(cat(error)),
+        $invoke_id=invokeID
     ];
 
     Log::write(LOG_VARLIST_ACCESS, rec);
