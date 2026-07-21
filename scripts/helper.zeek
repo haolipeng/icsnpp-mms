@@ -16,6 +16,14 @@ export {
         parse_error:   string;
     };
 
+    type MMS_ObjectPathFields: record {
+        object_path: string;
+        ld:          string &optional;
+        ln:          string &optional;
+        do:          string &optional;
+        da:          string &optional;
+    };
+
     # Parse status is the coarse parsing quality level. Parse error is the
     # concrete reason that explains a non-ok or non-applicable status.
     const mms_parse_status_values: set[string] = {
@@ -56,6 +64,7 @@ export {
         parse_error: string &default="none"
     ): MMS_OutcomeFields;
     global mms_is_high_risk_operation: function(operation: string): bool;
+    global mms_object_path_fields: function(name: ObjectName): MMS_ObjectPathFields;
 }
 
 function mms_endpoint_fields(id: conn_id): MMS_EndpointFields {
@@ -201,6 +210,43 @@ function objectName_to_string(name: ObjectName): string {
     } else {
         return "<unknown>";
     }
+}
+
+function mms_object_path_fields(name: ObjectName): MMS_ObjectPathFields {
+    if(name ?$ vmd_specific)
+        return [$object_path="vmd:" + name$vmd_specific];
+
+    if(name ?$ aa_specific)
+        return [$object_path="aa:" + name$aa_specific];
+
+    if(name ?$ domain_specific) {
+        local domain_id = name$domain_specific$domainId;
+        local item_id = name$domain_specific$itemId;
+        local fields: MMS_ObjectPathFields = [
+            $object_path="domain:" + domain_id + "/" + item_id
+        ];
+
+        local parts = split_string(item_id, /\$/);
+        if(|parts| >= 3) {
+            fields$ld = domain_id;
+            fields$ln = parts[0];
+            fields$do = parts[1];
+
+            local da = "";
+            for(i in parts) {
+                if(i < 2)
+                    next;
+                if(|da| > 0)
+                    da += ".";
+                da += parts[i];
+            }
+            fields$da = da;
+        }
+
+        return fields;
+    }
+
+    return [$object_path="<unknown>"];
 }
 
 function typeSpecification_to_string(ts: TypeSpecification, fieldName: string &default=""): string {

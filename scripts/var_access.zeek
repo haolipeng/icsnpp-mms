@@ -13,6 +13,11 @@ export {
         id:        conn_id  &log;
         operation: string   &log;
         variable:  string   &log;
+        object_path: string &log;
+        ld:        string   &log &optional;
+        ln:        string   &log &optional;
+        do:        string   &log &optional;
+        da:        string   &log &optional;
         value:     string   &log &optional;
         success:   bool     &log;
         diag:      string   &log &optional;
@@ -44,6 +49,22 @@ export {
     const log_var_access: bool = T &redef;
 }
 
+function add_object_path_fields(rec: VariableAccess, name: ObjectName): VariableAccess {
+    local object_fields = mms_object_path_fields(name);
+
+    rec$object_path = object_fields$object_path;
+    if(object_fields?$ld)
+        rec$ld = object_fields$ld;
+    if(object_fields?$ln)
+        rec$ln = object_fields$ln;
+    if(object_fields?$do)
+        rec$do = object_fields$do;
+    if(object_fields?$da)
+        rec$da = object_fields$da;
+
+    return rec;
+}
+
 event zeek_init() &priority=5
 {
     # Log::create_stream 注册一条日志流，三个参数含义如下：
@@ -69,9 +90,11 @@ event VariableReadRequest(c: connection, direction: string, invokeID: int, name:
         $id=c$id,
         $operation="read_request",
         $variable=objectName_to_string(name),
+        $object_path="",
         $success=T,
         $invoke_id=invokeID
     ];
+    rec = add_object_path_fields(rec, name);
 
     Log::write(LOG_VAR_ACCESS, rec);
 }
@@ -86,10 +109,12 @@ event VariableReadResponse(c: connection, direction: string, invokeID: int, name
         $id=c$id,
         $operation="read",
         $variable=objectName_to_string(name),
+        $object_path="",
         $value=data_to_string(data),
         $success=T,
         $invoke_id=invokeID
     ];
+    rec = add_object_path_fields(rec, name);
 
     Log::write(LOG_VAR_ACCESS, rec);
 }
@@ -104,10 +129,12 @@ event VariableWriteRequest(c: connection, direction: string, invokeID: int, name
         $id=c$id,
         $operation="write_request",
         $variable=objectName_to_string(name),
+        $object_path="",
         $value=data_to_string(data),
         $success=T,
         $invoke_id=invokeID
     ];
+    rec = add_object_path_fields(rec, name);
 
     Log::write(LOG_VAR_ACCESS, rec);
 }
@@ -122,10 +149,12 @@ event VariableWriteResponse(c: connection, direction: string, invokeID: int, nam
         $id=c$id,
         $operation="write",
         $variable=objectName_to_string(name),
+        $object_path="",
         $value=data_to_string(data),
         $success=T,
         $invoke_id=invokeID
     ];
+    rec = add_object_path_fields(rec, name);
 
     Log::write(LOG_VAR_ACCESS, rec);
 }
@@ -140,10 +169,12 @@ event VariableReadResponseError(c: connection, direction: string, invokeID: int,
         $id=c$id,
         $operation="read",
         $variable=objectName_to_string(name),
+        $object_path="",
         $success=F,
         $diag=remove_ns(cat(error)),
         $invoke_id=invokeID
     ];
+    rec = add_object_path_fields(rec, name);
 
     Log::write(LOG_VAR_ACCESS, rec);
 }
@@ -158,11 +189,13 @@ event VariableWriteResponseError(c: connection, direction: string, invokeID: int
         $id=c$id,
         $operation="write",
         $variable=objectName_to_string(name),
+        $object_path="",
         $value=data_to_string(data),
         $success=F,
         $diag=remove_ns(cat(error)),
         $invoke_id=invokeID
     ];
+    rec = add_object_path_fields(rec, name);
 
     Log::write(LOG_VAR_ACCESS, rec);
 }
@@ -300,9 +333,11 @@ event VariableReport(c: connection, direction: string, name: ObjectName, data: D
         $id=c$id,
         $operation="report",
         $variable=objectName_to_string(name),
+        $object_path="",
         $value=data_to_string(data),
         $success=T
     ];
+    rec = add_object_path_fields(rec, name);
 
     Log::write(LOG_VAR_ACCESS, rec);
 }
@@ -317,9 +352,11 @@ event VariableReportError(c: connection, direction: string, name: ObjectName, er
         $id=c$id,
         $operation="report",
         $variable=objectName_to_string(name),
+        $object_path="",
         $success=F,
         $diag=remove_ns(cat(error))
     ];
+    rec = add_object_path_fields(rec, name);
 
     Log::write(LOG_VAR_ACCESS, rec);
 }

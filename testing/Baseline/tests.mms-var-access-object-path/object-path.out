@@ -1,0 +1,4 @@
+read	LD0::LLN0$Mod$stVal	domain:LD0/LLN0$Mod$stVal	LD0	LLN0	Mod	stVal	T	201
+read	LD0::VendorCustom	domain:LD0/VendorCustom	-	-	-	-	T	202
+read	NamedVariable	vmd:NamedVariable	-	-	-	-	T	203
+read	AssociationVariable (aa)	aa:AssociationVariable	-	-	-	-	T	204
