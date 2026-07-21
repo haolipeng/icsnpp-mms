@@ -1,8 +1,14 @@
 # @TEST-EXEC: zeek -b "$PACKAGE/../plugin/scripts/__preload__.zeek" "$PACKAGE/../plugin/scripts/events.zeek" "$PACKAGE/main.zeek" %INPUT > zeek.stdout 2> zeek.stderr
 # @TEST-EXEC: check-mms-log-contract exists mms.log
-# @TEST-EXEC: check-mms-log-contract fields mms.log ts uid id.orig_h id.orig_p id.resp_h id.resp_p src_ip dst_ip src_port dst_port deviceVendor deviceModel deviceRevision protocolVersion parameterCBB servicesSupported
+# @TEST-EXEC: check-mms-log-contract fields mms.log ts uid id.orig_h id.orig_p id.resp_h id.resp_p src_ip dst_ip src_port dst_port result error_code parse_status parse_error deviceVendor deviceModel deviceRevision protocolVersion parameterCBB servicesSupported
+# @TEST-EXEC: check-mms-log-contract enum mms.log result success failure unknown not_applicable
+# @TEST-EXEC: check-mms-log-contract enum mms.log parse_status ok partial failed not_applicable
 # @TEST-EXEC: zeek-cut src_ip dst_ip src_port dst_port < mms.log > endpoints.out
 # @TEST-EXEC: btest-diff endpoints.out
+# @TEST-EXEC: zeek-cut result error_code parse_status parse_error < mms.log > outcome.out
+# @TEST-EXEC: btest-diff outcome.out
+# @TEST-EXEC: zeek-cut deviceVendor deviceModel deviceRevision < mms.log > identity.out
+# @TEST-EXEC: btest-diff identity.out
 # @TEST-EXEC-FAIL: check-mms-log-contract fields mms.log src_mac 2> no-src-mac.err
 # @TEST-EXEC: cat no-src-mac.err > no-src-mac.out
 # @TEST-EXEC: btest-diff no-src-mac.out
@@ -27,6 +33,9 @@
 # @TEST-EXEC-FAIL: check-mms-log-contract fields mms.log object_path 2> no-object-path.err
 # @TEST-EXEC: cat no-object-path.err > no-object-path.out
 # @TEST-EXEC: btest-diff no-object-path.out
+# @TEST-EXEC-FAIL: check-mms-log-contract fields mms.log operation 2> no-operation.err
+# @TEST-EXEC: cat no-operation.err > no-operation.out
+# @TEST-EXEC: btest-diff no-operation.out
 # @TEST-EXEC: echo 'session summary contract passed' > output
 # @TEST-EXEC: btest-diff output
 

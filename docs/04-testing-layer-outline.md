@@ -7,7 +7,7 @@
 你可以把它理解成：
 
 ```text
-测试用例进来 → 配好 Zeek 环境 → 跑 Zeek / 跑辅助脚本 → 生成输出 → 和 Baseline 对账
+测试用例进来 → 配好 Zeek 环境 → 跑 Zeek / 跑辅助脚本 → 生成输出 → 和 Baseline 比对
 ```
 
 > 测试不是为了证明“代码看起来对”，而是为了证明“外部能观察到的行为没有变坏”。
@@ -16,13 +16,13 @@
 
 `testing/` 目录里主要有五类东西：
 
-```text
-btest.cfg       流水线配置：测试在哪、临时目录在哪、环境变量怎么设
-tests/          测试入口：每个文件声明自己要执行哪些命令
-Baseline/       预期输出：btest-diff 用它判断输出有没有变
-Scripts/        辅助脚本：准备环境、规整 diff、检查日志契约
-Files/Traces/   测试输入：固定种子、C 测试文件、pdus.der 等
-```
+| 路径 | 作用 | 在流水线里的位置 |
+| --- | --- | --- |
+| `btest.cfg` | 流水线配置，说明测试在哪、临时目录在哪、环境变量怎么设 | 配置入口 |
+| `tests/` | 测试入口，每个文件声明自己要执行哪些命令 | 执行入口 |
+| `Baseline/` | 预期输出，`btest-diff` 用它判断输出有没有变 | 结果参照 |
+| `Scripts/` | 辅助脚本，用来准备环境、规整 diff、检查日志契约 | 可复用工具 |
+| `Files/Traces/` | 测试输入，包括固定种子、C 测试文件、`pdus.der` 等 | 固定输入 |
 
 整体流向很短：
 
@@ -35,7 +35,20 @@ flowchart TB
     Base["Baseline/"] --> Diff
 ```
 
-这条流水线的关键点是：**测试只看命令输出和日志文件，不去碰内部实现细节。**
+这张图可以简单理解成：
+
+```text
+btest.cfg   先把测试环境准备好
+tests/      告诉 btest 要跑哪个测试命令
+Run         实际去跑 Zeek 或辅助脚本
+output/log  把跑出来的结果写成文件
+Baseline/   放着预期中应该看到的结果
+btest-diff  比较本次结果和预期结果，不一样就报失败
+```
+
+也就是说，`btest.cfg` 先搭好环境，`tests/` 决定要跑什么，命令跑完后留下 `output` 或日志文件，最后 `btest-diff` 拿这些文件和 `Baseline/` 里的预期结果做比较。
+
+这条流水线最重要的一点是：**它只检查最终能看到的输出，不直接检查代码内部怎么实现。**
 
 ## 2. `btest.cfg`：先把环境配好
 
@@ -110,7 +123,7 @@ tests.helper-field-contract-invalid-error
 tests.log-contract-checker
 ```
 
-## 4. `Baseline/`：预期输出就是账本
+## 4. `Baseline/`：预期输出就是参照
 
 btest 的核心判断很直接：
 
@@ -189,78 +202,20 @@ check-mms-log-contract
 
 它的边界很明确：**检查日志消费者能看到的外部契约，不检查 helper 内部怎么实现。**
 
-当前 `tests.log-contract-checker` 用合成的 Zeek ASCII 日志 `mms_sample.log` 验证这个检查器本身。比如要保证 `parse_status` 只出现合法值，btest 里可以写：
+当前 `tests.log-contract-checker` 用合成的 Zeek ASCII 日志 `mms_sample.log` 验证这个检查器本身。比如它会用下面这种命令保证 `parse_status` 只出现合法值：
 
 ```text
 # @TEST-EXEC: check-mms-log-contract enum mms_sample.log parse_status ok partial failed not_applicable
 ```
 
-后续真实业务日志测试落地后，可以把 `mms_sample.log` 换成实际生成的日志文件。这样每个日志 ticket 都可以复用同一套检查方式，不用各自写一段临时 awk。
+这样字段契约检查逻辑集中在一个脚本里，测试文件只需要表达“要检查哪一个日志契约”。
 
-## 7. 新增一个 btest，大概怎么走
-
-新增测试时，可以按这个顺序想：
-
-```text
-1. 这个测试要观察什么外部行为？
-2. 输入来自 Zeek 脚本、`pdus.der`，还是合成 Zeek ASCII 日志？
-3. 输出应该是 stdout、XML/DER 往返结果、Zeek ASCII 日志，还是错误信息？
-4. 是否需要 btest-diff 和 Baseline？
-5. 是否能复用 Scripts/ 里的辅助检查器？
-```
-
-最小形态通常是：
-
-```text
-# @TEST-EXEC: 运行命令 > output
-# @TEST-EXEC: btest-diff output
-```
-
-如果测试会生成或合成 Zeek ASCII 日志，可以再加字段契约检查。当前已有的 `tests.log-contract-checker` 就是先合成 `mms_sample.log`，再检查字段契约：
-
-```text
-# @TEST-EXEC: check-mms-log-contract exists mms_sample.log
-# @TEST-EXEC: check-mms-log-contract fields mms_sample.log ts uid result parse_status
-# @TEST-EXEC: check-mms-log-contract enum mms_sample.log result success failure unknown not_applicable
-```
-
-如果命令应该失败，就明确写成：
-
-```text
-# @TEST-EXEC-FAIL: zeek ... 2> error
-# @TEST-EXEC: btest-diff error
-```
-
-这样失败本身也会成为被固定下来的行为。
-
-## 8. 不同测试看不同边界
-
-这个仓库里测试边界大致分四层：
-
-| 测试类型 | 观察边界 | 适合检查什么 |
-| --- | --- | --- |
-| 插件冒烟测试 | `zeek -NN OSS::MMS` | 插件是否能被 Zeek 看见 |
-| helper 测试 | Zeek 脚本公开 helper 输出 | 字段默认值、枚举、风险判断 |
-| parser 样本测试 | `pdus.der` 与 XML/DER 往返 | `test-parser` 解析和再编码是否稳定 |
-| 日志契约测试 | Zeek ASCII 日志样本 | 文件、字段、枚举、空值表达 |
-
-不要把所有事都塞进一个测试。好的测试应该只盯一个外部边界：
-
-```text
-插件能加载      → show-plugin
-helper 输出稳定 → helper-field-contract
-日志字段合法    → check-mms-log-contract
-样本解析稳定    → parser
-```
-
-这样某个测试失败时，才容易看出是哪一层出问题。
-
-## 9. 小结
+## 7. 小结
 
 用一句话串起来：
 
 ```text
-btest.cfg 配环境 → tests/ 执行命令 → Zeek/脚本生成输出 → btest-diff 对 Baseline → 字段契约检查器守住 Zeek ASCII 日志约定
+btest.cfg 配环境 → tests/ 执行命令 → Zeek/脚本生成输出 → btest-diff 与 Baseline 比对 → 字段契约检查器守住 Zeek ASCII 日志约定
 ```
 
 前四篇文档的关系：

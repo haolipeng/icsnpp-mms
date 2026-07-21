@@ -15,6 +15,10 @@ export {
         dst_ip:               addr    &log;
         src_port:             port    &log;
         dst_port:             port    &log;
+        result:               string  &log;
+        error_code:           string  &log;
+        parse_status:         string  &log;
+        parse_error:          string  &log;
         deviceVendor:         string &log &optional;
         deviceModel:          string &log &optional;
         deviceRevision:       string &log &optional;
@@ -38,6 +42,7 @@ export {
 function get_info(c: connection): Info {
     if(!c?$mms_info) {
         local endpoint_fields = mms_endpoint_fields(c$id);
+        local outcome_fields = mms_outcome_fields();
         c$mms_info = [
             $ts=network_time(),
             $uid=c$uid,
@@ -45,7 +50,11 @@ function get_info(c: connection): Info {
             $src_ip=endpoint_fields$src_ip,
             $dst_ip=endpoint_fields$dst_ip,
             $src_port=endpoint_fields$src_port,
-            $dst_port=endpoint_fields$dst_port
+            $dst_port=endpoint_fields$dst_port,
+            $result=outcome_fields$result,
+            $error_code=outcome_fields$error_code,
+            $parse_status=outcome_fields$parse_status,
+            $parse_error=outcome_fields$parse_error
         ];
     }
     return c$mms_info;
