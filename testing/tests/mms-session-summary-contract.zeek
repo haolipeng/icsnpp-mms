@@ -1,4 +1,6 @@
 # @TEST-EXEC: zeek -b "$PACKAGE/../plugin/scripts/__preload__.zeek" "$PACKAGE/../plugin/scripts/events.zeek" "$PACKAGE/main.zeek" %INPUT > zeek.stdout 2> zeek.stderr
+# @TEST-EXEC: sed -E -e '/ignoring dynamic plugin OSS::MMS/d' -e 's|^warning in .*/icsnpp-mms/plugin/scripts/|warning in <repo>/plugin/scripts/|' -e 's|^warning in .*/icsnpp-mms/scripts/|warning in <repo>/scripts/|' -e 's|, line [0-9]+:|, line X:|' zeek.stderr > zeek.stderr.normalized
+# @TEST-EXEC: btest-diff zeek.stderr.normalized
 # @TEST-EXEC: check-mms-log-contract exists mms.log
 # @TEST-EXEC: check-mms-log-contract fields mms.log ts uid id.orig_h id.orig_p id.resp_h id.resp_p src_ip dst_ip src_port dst_port result error_code parse_status parse_error deviceVendor deviceModel deviceRevision protocolVersion parameterCBB servicesSupported
 # @TEST-EXEC: check-mms-log-contract enum mms.log result success failure unknown not_applicable
@@ -73,6 +75,6 @@ event zeek_init()
         $revision="1"
     ];
 
-    event IdentifyResponse(c, ident);
+    event IdentifyResponse(c, "resp_to_orig", ident);
     event connection_state_remove(c);
     }

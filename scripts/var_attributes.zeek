@@ -39,7 +39,7 @@ event zeek_init() &priority=5
 # 监听 events.zeek 的配对级事件 VariableAccessAttributes
 # （GetVariableAccessAttributes 请求与响应按 invokeID 配对后）→ mms_var_attributes.log
 # =====================================================================
-event VariableAccessAttributes(c: connection, request: GetVariableAccessAttributes_Request, response: GetVariableAccessAttributes_Response) {
+event VariableAccessAttributes(c: connection, direction: string, request: GetVariableAccessAttributes_Request, response: GetVariableAccessAttributes_Response) {
 
     if(!log_var_attributes) return;
 
@@ -57,7 +57,7 @@ event VariableAccessAttributes(c: connection, request: GetVariableAccessAttribut
 }
 
 # GetVariableAccessAttributes 失败（confirmed 错误与缓存请求配对后触发）
-event VariableAccessAttributesError(c: connection, request: GetVariableAccessAttributes_Request, response: Confirmed_ErrorPDU) {
+event VariableAccessAttributesError(c: connection, direction: string, request: GetVariableAccessAttributes_Request, response: Confirmed_ErrorPDU) {
 
     if(!log_var_attributes) return;
 

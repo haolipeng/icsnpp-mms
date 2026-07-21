@@ -42,7 +42,7 @@ event zeek_init() &priority=5
 # 监听 events.zeek 的配对级事件 NamedVariableListAttributes
 # （GetNamedVariableListAttributes 请求与响应按 invokeID 配对后）→ mms_varlist_attributes.log
 # =====================================================================
-event NamedVariableListAttributes(c: connection, request: GetNamedVariableListAttributes_Request, response: GetNamedVariableListAttributes_Response) {
+event NamedVariableListAttributes(c: connection, direction: string, request: GetNamedVariableListAttributes_Request, response: GetNamedVariableListAttributes_Response) {
 
     if(!log_varlist_attributes) return;
 
@@ -73,7 +73,7 @@ event NamedVariableListAttributes(c: connection, request: GetNamedVariableListAt
 }
 
 # GetNamedVariableListAttributes 失败（confirmed 错误与缓存请求配对后触发）
-event NamedVariableListAttributesError (c: connection, request: GetNamedVariableListAttributes_Request, response: Confirmed_ErrorPDU) {
+event NamedVariableListAttributesError (c: connection, direction: string, request: GetNamedVariableListAttributes_Request, response: Confirmed_ErrorPDU) {
 
     if(!log_varlist_attributes) return;
 

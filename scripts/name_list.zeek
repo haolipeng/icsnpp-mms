@@ -40,7 +40,7 @@ event zeek_init() &priority=5
 # =====================================================================
 # 监听 events.zeek 的配对级事件 NameList（GetNameList 请求与响应按 invokeID 配对后）→ mms_name_list.log
 # =====================================================================
-event NameList(c: connection, request: GetNameList_Request, response: GetNameList_Response) {
+event NameList(c: connection, direction: string, request: GetNameList_Request, response: GetNameList_Response) {
     local scope: string = "";
     local value: string = "";
     local class: string = "";
@@ -100,7 +100,7 @@ event NameList(c: connection, request: GetNameList_Request, response: GetNameLis
 }
 
 # GetNameList 失败（confirmed 错误与缓存请求配对后触发）
-event NameListError (c: connection, request: GetNameList_Request, response: Confirmed_ErrorPDU) {
+event NameListError (c: connection, direction: string, request: GetNameList_Request, response: Confirmed_ErrorPDU) {
     local scope: string;
     local class: string;
     local domain: string;
@@ -144,4 +144,3 @@ event NameListError (c: connection, request: GetNameList_Request, response: Conf
 
     Log::write(LOG_NAMELIST, rec);
 }
-

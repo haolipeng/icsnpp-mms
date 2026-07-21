@@ -57,7 +57,7 @@ event zeek_init() &priority=5
 # =====================================================================
 # 单变量：Confirmed 读/写响应（成功/失败）→ mms_var_access.log
 # =====================================================================
-event VariableReadResponse(c: connection, name: ObjectName, data: Data) {
+event VariableReadResponse(c: connection, direction: string, name: ObjectName, data: Data) {
 
     if(!log_var_access) return;
 
@@ -74,7 +74,7 @@ event VariableReadResponse(c: connection, name: ObjectName, data: Data) {
     Log::write(LOG_VAR_ACCESS, rec);
 }
 
-event VariableWriteResponse(c: connection, name: ObjectName, data: Data) {
+event VariableWriteResponse(c: connection, direction: string, name: ObjectName, data: Data) {
 
     if(!log_var_access) return;
 
@@ -91,7 +91,7 @@ event VariableWriteResponse(c: connection, name: ObjectName, data: Data) {
     Log::write(LOG_VAR_ACCESS, rec);
 }
 
-event VariableReadResponseError(c: connection, name: ObjectName, error: DataAccessError) {
+event VariableReadResponseError(c: connection, direction: string, name: ObjectName, error: DataAccessError) {
 
     if(!log_var_access) return;
 
@@ -108,7 +108,7 @@ event VariableReadResponseError(c: connection, name: ObjectName, error: DataAcce
     Log::write(LOG_VAR_ACCESS, rec);
 }
 
-event VariableWriteResponseError(c: connection, name: ObjectName, data: Data, error: DataAccessError) {
+event VariableWriteResponseError(c: connection, direction: string, name: ObjectName, data: Data, error: DataAccessError) {
 
     if(!log_var_access) return;
 
@@ -130,7 +130,7 @@ event VariableWriteResponseError(c: connection, name: ObjectName, data: Data, er
 # =====================================================================
 # 变量列表：Confirmed 读/写响应（成功 / 失败）→ mms_varlist_access.log
 # =====================================================================
-event VariableListReadResponse(c: connection, listname: ObjectName, listindex: count, data: Data) {
+event VariableListReadResponse(c: connection, direction: string, listname: ObjectName, listindex: count, data: Data) {
 
     if(!log_var_access) return;
 
@@ -148,7 +148,7 @@ event VariableListReadResponse(c: connection, listname: ObjectName, listindex: c
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
 
-event VariableListReadResponseError(c: connection, listname: ObjectName, listindex: count, error: DataAccessError) {
+event VariableListReadResponseError(c: connection, direction: string, listname: ObjectName, listindex: count, error: DataAccessError) {
 
     if(!log_var_access) return;
 
@@ -166,7 +166,7 @@ event VariableListReadResponseError(c: connection, listname: ObjectName, listind
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
 
-event VariableListWriteResponse(c: connection, listname: ObjectName, listindex: count, data: Data) {
+event VariableListWriteResponse(c: connection, direction: string, listname: ObjectName, listindex: count, data: Data) {
 
     if(!log_var_access) return;
 
@@ -184,7 +184,7 @@ event VariableListWriteResponse(c: connection, listname: ObjectName, listindex: 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
 
-event VariableListWriteResponseError(c: connection, listname: ObjectName, listindex: count, data: Data, error: DataAccessError) {
+event VariableListWriteResponseError(c: connection, direction: string, listname: ObjectName, listindex: count, data: Data, error: DataAccessError) {
 
     if(!log_var_access) return;
 
@@ -207,7 +207,7 @@ event VariableListWriteResponseError(c: connection, listname: ObjectName, listin
 # =====================================================================
 # 单变量 / 变量列表：Unconfirmed informationReport 上报 → 各自日志
 # =====================================================================
-event VariableReport(c: connection, name: ObjectName, data: Data) {
+event VariableReport(c: connection, direction: string, name: ObjectName, data: Data) {
 
     if(!log_var_access) return;
 
@@ -224,7 +224,7 @@ event VariableReport(c: connection, name: ObjectName, data: Data) {
     Log::write(LOG_VAR_ACCESS, rec);
 }
 
-event VariableReportError(c: connection, name: ObjectName, error: DataAccessError) {
+event VariableReportError(c: connection, direction: string, name: ObjectName, error: DataAccessError) {
 
     if(!log_var_access) return;
 
@@ -241,7 +241,7 @@ event VariableReportError(c: connection, name: ObjectName, error: DataAccessErro
     Log::write(LOG_VAR_ACCESS, rec);
 }
 
-event VariableListReport(c: connection, listname: ObjectName, listindex: count, data: Data) {
+event VariableListReport(c: connection, direction: string, listname: ObjectName, listindex: count, data: Data) {
     if(!log_var_access) return;
 
     local rec: VariableListAccess = [
@@ -258,7 +258,7 @@ event VariableListReport(c: connection, listname: ObjectName, listindex: count, 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
 
-event VariableListReportError(c: connection, listname: ObjectName, listindex: count, error: DataAccessError) {
+event VariableListReportError(c: connection, direction: string, listname: ObjectName, listindex: count, error: DataAccessError) {
     if(!log_var_access) return;
 
     local rec: VariableListAccess = [

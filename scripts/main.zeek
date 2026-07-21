@@ -74,7 +74,7 @@ event zeek_init() &priority=5
 # =====================================================================
 
 # Identify 响应：填充设备厂商 / 型号 / 版本
-event IdentifyResponse(c: connection, id: Identify_Response) {
+event IdentifyResponse(c: connection, direction: string, id: Identify_Response) {
     local info = get_info(c);
 
     if(id?$vendorName)
@@ -86,11 +86,11 @@ event IdentifyResponse(c: connection, id: Identify_Response) {
 }
 
 # Initiate 请求：当前无额外字段写入
-event initiateRequestPdu(c: connection, pdu: Initiate_RequestPDU) {
+event initiateRequestPdu(c: connection, direction: string, pdu: Initiate_RequestPDU) {
 }
 
 # Initiate 响应：填充协商后的协议版本、参数 CBB、支持的服务
-event initiateResponsePdu(c: connection, pdu: Initiate_ResponsePDU) {
+event initiateResponsePdu(c: connection, direction: string, pdu: Initiate_ResponsePDU) {
     local info = get_info(c);
 
     if(pdu?$mmsInitResponseDetail) {
