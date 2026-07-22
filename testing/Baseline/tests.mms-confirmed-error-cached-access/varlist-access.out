@@ -1,0 +1,4 @@
+read_request	ReadDataset	vmd:ReadDataset	success	none	0	-	T	-	1002
+read	ReadDataset	vmd:ReadDataset	failure	object_access_denied	0	-	F	ServiceError_object_access_denied	1002
+write_request	WriteDataset (aa)	aa:WriteDataset	success	none	0	{"type": "visible_string", "value": "blocked"}	T	-	1004
+write	WriteDataset (aa)	aa:WriteDataset	failure	object_invalidated	0	{"type": "visible_string", "value": "blocked"}	F	ServiceError_object_invalidated	1004

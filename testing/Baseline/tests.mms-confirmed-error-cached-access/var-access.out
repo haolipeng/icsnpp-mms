@@ -1,0 +1,4 @@
+read_request	LD0::LLN0$Mod$stVal	domain:LD0/LLN0$Mod$stVal	success	none	-	T	-	1001
+read	LD0::LLN0$Mod$stVal	domain:LD0/LLN0$Mod$stVal	failure	object_undefined	-	F	ServiceError_object_undefined	1001
+write_request	LD0::LLN0$Mod$q	domain:LD0/LLN0$Mod$q	success	none	{"type": "boolean", "value": "F"}	T	-	1003
+write	LD0::LLN0$Mod$q	domain:LD0/LLN0$Mod$q	failure	object_access_unsupported	{"type": "boolean", "value": "F"}	F	ServiceError_object_access_unsupported	1003

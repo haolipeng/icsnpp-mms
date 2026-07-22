@@ -12,6 +12,7 @@ module mms;
 # =====================================================================
 redef record connection += {
     mms_read_requests: table[int] of Read_Request &default=table();
+    mms_read_confirmed_error_requests: table[int] of Read_Request &default=table();
     mms_write_requests: table[int] of Write_Request &default=table();
     mms_name_list_requests: table[int] of GetNameList_Request &default=table();
     mms_get_variable_access_attributes_request: table[int] of GetVariableAccessAttributes_Request &default=table();
@@ -56,15 +57,19 @@ export {
     global VariableListReadRequest: event(c: connection, direction: string, invokeID: int, listname: ObjectName);
     global VariableReadResponse: event(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data);
     global VariableReadResponseError: event(c: connection, direction: string, invokeID: int, name: ObjectName, error: DataAccessError);
+    global VariableReadConfirmedError: event(c: connection, direction: string, invokeID: int, name: ObjectName, response: Confirmed_ErrorPDU);
     global VariableListReadResponse: event(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, data: Data);
     global VariableListReadResponseError: event(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, error: DataAccessError);
+    global VariableListReadConfirmedError: event(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, response: Confirmed_ErrorPDU);
 
     global VariableWriteRequest: event(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data);
     global VariableListWriteRequest: event(c: connection, direction: string, invokeID: int, listname: ObjectName, data: Data);
     global VariableWriteResponse: event(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data);
     global VariableWriteResponseError: event(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data, error: DataAccessError);
+    global VariableWriteConfirmedError: event(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data, response: Confirmed_ErrorPDU);
     global VariableListWriteResponse: event(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, data: Data);
     global VariableListWriteResponseError: event(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, data: Data, error: DataAccessError);
+    global VariableListWriteConfirmedError: event(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, data: Data, response: Confirmed_ErrorPDU);
 
     global VariableReport: event(c: connection, direction: string, name: ObjectName, data: Data);
     global VariableReportError: event(c: connection, direction: string, name: ObjectName, error: DataAccessError);
@@ -226,6 +231,8 @@ event mms::mms_pdu(c: connection, is_orig: bool, pdu: MMSpdu) {
 # or VariableListReadRequest events
 # =====================================================================
 event readRequest(c: connection, direction: string, invokeID: int, pdu: Read_Request) {
+    c $ mms_read_confirmed_error_requests[invokeID] = pdu;
+
     # 当 specificationWithResult 为 false 时，响应按规定不带 variableAccessSpecificatn，
     # readResponse 需按 invokeID 从本表取回整份 Read_Request
     # When specificationWithResult is false, the response omits variableAccessSpecificatn;
@@ -414,7 +421,23 @@ event getNamedVariableListAttributesResponse(c: connection, direction: string, i
 # error event (read/write confirmed errors are not handled here)
 # =====================================================================
 event confirmedErrorPDU_evt(c: connection, direction: string, invokeID: int, pdu: Confirmed_ErrorPDU) {
-    if(invokeID in c $ mms_get_variable_access_attributes_request)
+    if(invokeID in c $ mms_read_confirmed_error_requests) {
+        local read_request = c $ mms_read_confirmed_error_requests[invokeID];
+        if(read_request $ variableAccessSpecificatn ?$ listOfVariable) {
+            for(i in read_request $ variableAccessSpecificatn $ listOfVariable)
+                event VariableReadConfirmedError(c, direction, invokeID, read_request $ variableAccessSpecificatn $ listOfVariable[i] $ variableSpecification $ name, pdu);
+        } else {
+            event VariableListReadConfirmedError(c, direction, invokeID, read_request $ variableAccessSpecificatn $ variableListName, 0, pdu);
+        }
+    } else if(invokeID in c $ mms_write_requests) {
+        local write_request = c $ mms_write_requests[invokeID];
+        if(write_request $ variableAccessSpecificatn ?$ listOfVariable) {
+            for(i in write_request $ variableAccessSpecificatn $ listOfVariable)
+                event VariableWriteConfirmedError(c, direction, invokeID, write_request $ variableAccessSpecificatn $ listOfVariable[i] $ variableSpecification $ name, write_request $ listOfData[i], pdu);
+        } else {
+            event VariableListWriteConfirmedError(c, direction, invokeID, write_request $ variableAccessSpecificatn $ variableListName, 0, write_request $ listOfData[0], pdu);
+        }
+    } else if(invokeID in c $ mms_get_variable_access_attributes_request)
         event VariableAccessAttributesError(c, direction, invokeID, c $ mms_get_variable_access_attributes_request[invokeID], pdu);
     else if(invokeID in c $ mms_name_list_requests)
         event NameListError(c, direction, invokeID, c $ mms_name_list_requests[invokeID], pdu);

@@ -239,6 +239,30 @@ event VariableReadResponseError(c: connection, direction: string, invokeID: int,
     Log::write(LOG_VAR_ACCESS, rec);
 }
 
+event VariableReadConfirmedError(c: connection, direction: string, invokeID: int, name: ObjectName, response: Confirmed_ErrorPDU) {
+
+    if(!log_var_access) return;
+
+    local diag = errorClass_to_string(response$serviceError);
+    local rec: VariableAccess = [
+        $ts=network_time(),
+        $uid=c$uid,
+        $id=c$id,
+        $operation="read",
+        $variable=objectName_to_string(name),
+        $object_path="",
+        $result="failure",
+        $error_code=mms_service_error_code(diag),
+        $is_high_risk_operation=mms_is_high_risk_operation("read"),
+        $success=F,
+        $diag=diag,
+        $invoke_id=invokeID
+    ];
+    rec = add_object_path_fields(rec, name);
+
+    Log::write(LOG_VAR_ACCESS, rec);
+}
+
 event VariableWriteResponseError(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data, error: DataAccessError) {
 
     if(!log_var_access) return;
@@ -256,6 +280,31 @@ event VariableWriteResponseError(c: connection, direction: string, invokeID: int
         $value=data_to_string(data),
         $success=F,
         $diag=remove_ns(cat(error)),
+        $invoke_id=invokeID
+    ];
+    rec = add_object_path_fields(rec, name);
+
+    Log::write(LOG_VAR_ACCESS, rec);
+}
+
+event VariableWriteConfirmedError(c: connection, direction: string, invokeID: int, name: ObjectName, data: Data, response: Confirmed_ErrorPDU) {
+
+    if(!log_var_access) return;
+
+    local diag = errorClass_to_string(response$serviceError);
+    local rec: VariableAccess = [
+        $ts=network_time(),
+        $uid=c$uid,
+        $id=c$id,
+        $operation="write",
+        $variable=objectName_to_string(name),
+        $object_path="",
+        $result="failure",
+        $error_code=mms_service_error_code(diag),
+        $is_high_risk_operation=mms_is_high_risk_operation("write"),
+        $value=data_to_string(data),
+        $success=F,
+        $diag=diag,
         $invoke_id=invokeID
     ];
     rec = add_object_path_fields(rec, name);
@@ -338,6 +387,31 @@ event VariableListReadResponseError(c: connection, direction: string, invokeID: 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
 
+event VariableListReadConfirmedError(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, response: Confirmed_ErrorPDU) {
+
+    if(!log_var_access) return;
+
+    local diag = errorClass_to_string(response$serviceError);
+    local rec: VariableListAccess = [
+        $ts=network_time(),
+        $uid=c$uid,
+        $id=c$id,
+        $operation="read",
+        $listname=objectName_to_string(listname),
+        $object_path="",
+        $result="failure",
+        $error_code=mms_service_error_code(diag),
+        $is_high_risk_operation=mms_is_high_risk_operation("read"),
+        $listindex=listindex,
+        $success=F,
+        $diag=diag,
+        $invoke_id=invokeID
+    ];
+    rec = add_varlist_object_path_fields(rec, listname);
+
+    Log::write(LOG_VARLIST_ACCESS, rec);
+}
+
 event VariableListWriteRequest(c: connection, direction: string, invokeID: int, listname: ObjectName, data: Data) {
     if(!log_var_access) return;
 
@@ -403,6 +477,32 @@ event VariableListWriteResponseError(c: connection, direction: string, invokeID:
         $value=data_to_string(data),
         $success=F,
         $diag=remove_ns(cat(error)),
+        $invoke_id=invokeID
+    ];
+    rec = add_varlist_object_path_fields(rec, listname);
+
+    Log::write(LOG_VARLIST_ACCESS, rec);
+}
+
+event VariableListWriteConfirmedError(c: connection, direction: string, invokeID: int, listname: ObjectName, listindex: count, data: Data, response: Confirmed_ErrorPDU) {
+
+    if(!log_var_access) return;
+
+    local diag = errorClass_to_string(response$serviceError);
+    local rec: VariableListAccess = [
+        $ts=network_time(),
+        $uid=c$uid,
+        $id=c$id,
+        $operation="write",
+        $listname=objectName_to_string(listname),
+        $object_path="",
+        $result="failure",
+        $error_code=mms_service_error_code(diag),
+        $is_high_risk_operation=mms_is_high_risk_operation("write"),
+        $listindex=listindex,
+        $value=data_to_string(data),
+        $success=F,
+        $diag=diag,
         $invoke_id=invokeID
     ];
     rec = add_varlist_object_path_fields(rec, listname);
