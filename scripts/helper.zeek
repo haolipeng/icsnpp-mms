@@ -8,7 +8,7 @@ export {
         dst_port:  port;
     };
 
-    type MMS_OutcomeFields: record {
+    type MMS_ResultFields: record {
         result:        string;
         error_code:    string;
         diag:          string &optional;
@@ -56,13 +56,13 @@ export {
     } &redef;
 
     global mms_endpoint_fields: function(id: conn_id): MMS_EndpointFields;
-    global mms_outcome_fields: function(
+    global mms_result_fields: function(
         result: string &default="success",
         error_code: string &default="none",
         diag: string &default="",
         parse_status: string &default="ok",
         parse_error: string &default="none"
-    ): MMS_OutcomeFields;
+    ): MMS_ResultFields;
     global mms_is_high_risk_operation: function(operation: string): bool;
     global mms_object_path_fields: function(name: ObjectName): MMS_ObjectPathFields;
 }
@@ -76,20 +76,20 @@ function mms_endpoint_fields(id: conn_id): MMS_EndpointFields {
     ];
 }
 
-function mms_outcome_fields(
+function mms_result_fields(
     result: string &default="success",
     error_code: string &default="none",
     diag: string &default="",
     parse_status: string &default="ok",
     parse_error: string &default="none"
-): MMS_OutcomeFields {
+): MMS_ResultFields {
     if ( parse_status !in mms_parse_status_values )
         Reporter::fatal(fmt("invalid MMS parse_status: %s", parse_status));
 
     if ( parse_error !in mms_parse_error_values )
         Reporter::fatal(fmt("invalid MMS parse_error: %s", parse_error));
 
-    local fields: MMS_OutcomeFields = [
+    local fields: MMS_ResultFields = [
         $result=result,
         $error_code=error_code,
         $parse_status=parse_status,

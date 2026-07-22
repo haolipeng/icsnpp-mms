@@ -1,113 +1,196 @@
-# MMS 插件编译安装与测试 Quickstart
+# MMS 插件编译与 PCAP 测试 Quickstart
 
-本文档用于记录 MMS 插件及其依赖的编译、安装、测试流程，以及 Zeek 回放 PCAP 后日志文件的查看位置。
+本文档记录当前仓库推荐的 MMS 端到端测试方式：使用本地 Zeek
+源码构建环境和 `/home/work/openSource/ics-security` 下的本地协议插件，
+回放 `/home/work/pcaps_dataset` 中的 MMS PCAP。
 
-## 1. 环境路径
+不要使用 `@load packages`，也不要从
+`/usr/local/zeek/share/zeek/site/packages` 加载 TPKT/COTP/ACSE。那些路径
+可能包含旧脚本，容易和本仓库当前事件签名冲突。
 
-运行命令需要用到的路径如下：
+## 1. 路径
 
 ```text
-Zeek 安装路径：/usr/local/zeek
-MMS 插件源码：/home/work/openSource/ics-security/icsnpp-mms
-PCAP 样本目录：/home/work/pcaps_dataset
-测试输出目录：/tmp/icsnpp-mms-test-output
+Zeek 源码：       /home/work/openSource/ics-security/zeek-8.0.8
+PCAP 样本目录：  /home/work/pcaps_dataset
+测试输出目录：   /tmp/icsnpp-mms-test-output
+
+TPKT：           /home/work/openSource/ics-security/icsnpp-tpkt
+COTP：           /home/work/openSource/ics-security/icsnpp-cotp
+SESS：           /home/work/openSource/ics-security/icsnpp-sess
+PRES：           /home/work/openSource/ics-security/icsnpp-pres
+ACSE：           /home/work/openSource/ics-security/icsnpp-acse
+MMS：            /home/work/openSource/ics-security/icsnpp-mms
 ```
 
-检查当前 Zeek 环境：
+常用变量：
 
 ```bash
-which zeek
-zeek -v
-zeek-config --prefix
+ROOT=/home/work/openSource/ics-security
+ZEEK_DIST=$ROOT/zeek-8.0.8
+ZEEK=$ZEEK_DIST/build/src/zeek
+SPICYZ=$ZEEK_DIST/build/src/spicy/spicyz/spicyz
+BIFCL=$ZEEK_DIST/build/auxil/bifcl/bifcl
+PCAPS=/home/work/pcaps_dataset
+OUT=/tmp/icsnpp-mms-test-output
 ```
 
-## 2. 安装 MMS 依赖
+## 2. 构建本地依赖
 
-MMS over TCP/102 依赖 ISO 协议栈。先安装 TPKT、COTP、SESS、PRES、ACSE：
+TPKT、COTP、SESS 是 Spicy analyzer，构建后产物是 `.hlto`：
 
 ```bash
-zkg install --force https://github.com/DINA-community/icsnpp-tpkt
-zkg install --force https://github.com/DINA-community/icsnpp-cotp
-zkg install --force https://github.com/DINA-community/icsnpp-sess
-zkg install --force https://github.com/DINA-community/icsnpp-pres
-zkg install --force https://github.com/DINA-community/icsnpp-acse
+ROOT=/home/work/openSource/ics-security
+SPICYZ=$ROOT/zeek-8.0.8/build/src/spicy/spicyz/spicyz
+
+for plugin in icsnpp-tpkt icsnpp-cotp icsnpp-sess; do
+  cd "$ROOT/$plugin"
+  rm -rf build
+  cmake -S . -B build -DSPICYZ="$SPICYZ"
+  cmake --build build -j"$(nproc)"
+done
 ```
 
-验证依赖安装状态：
+PRES、ACSE、MMS 是动态 Zeek 插件：
 
 ```bash
-zkg list | rg -i 'tpkt|cotp|sess|pres|acse'
-zeek -NN | rg -i 'TPKT|COTP|SESS|PRES|ACSE'
+ROOT=/home/work/openSource/ics-security
+ZEEK_DIST=$ROOT/zeek-8.0.8
+BIFCL=$ZEEK_DIST/build/auxil/bifcl/bifcl
+
+for plugin in icsnpp-pres icsnpp-acse icsnpp-mms; do
+  cd "$ROOT/$plugin"
+  rm -rf build
+  ./configure --zeek-dist="$ZEEK_DIST" --with-bifcl="$BIFCL"
+  cmake --build build -j"$(nproc)"
+done
 ```
 
-## 3. 编译安装 MMS 插件
-
-将 MMS 插件统一安装到 `/usr/local/zeek` 对应的 Zeek 插件目录：
+检查关键产物：
 
 ```bash
-cd /home/work/openSource/ics-security/icsnpp-mms
-
-rm -rf build
-./configure --with-bifcl=/usr/local/zeek/bin/bifcl
-cmake --build build -j"$(nproc)"
-sudo cmake --build build --target install
+ls -lh \
+  $ROOT/icsnpp-tpkt/build/tpkt.hlto \
+  $ROOT/icsnpp-cotp/build/cotp.hlto \
+  $ROOT/icsnpp-sess/build/sess.hlto \
+  $ROOT/icsnpp-pres/build/lib/OSS-PRES.linux-x86_64.so \
+  $ROOT/icsnpp-acse/build/lib/OSS-ACSE.linux-x86_64.so \
+  $ROOT/icsnpp-mms/build/lib/OSS-MMS.linux-x86_64.so
 ```
 
-验证 MMS 插件是否可见：
-
-```bash
-zeek -NN | rg -i 'MMS|ISO_1_0_9506'
-```
-
-## 4. 运行 MMS 插件测试
-
-### 自带 btest
+## 3. 运行 btest
 
 ```bash
 cd /home/work/openSource/ics-security/icsnpp-mms/testing
-PATH=/home/work/openSource/ics-security/icsnpp-mms/build:$PATH btest -c btest.cfg
+btest -c btest.cfg
 ```
 
-### 单个 PCAP 回放
+## 4. 单个 PCAP 回放
 
-Zeek 会把日志写到执行 `zeek` 命令时所在的当前目录。下面示例将日志写到 `/tmp/icsnpp-mms-test-output/client-server-mms`：
+下面命令使用本地插件链回放一个 MMS Read 样本。日志写入 `$OUT`。
 
 ```bash
-OUT=/tmp/icsnpp-mms-test-output/client-server-mms
+ROOT=/home/work/openSource/ics-security
+ZEEK_DIST=$ROOT/zeek-8.0.8
+ZEEK=$ZEEK_DIST/build/src/zeek
+PCAPS=/home/work/pcaps_dataset
+OUT=/tmp/icsnpp-mms-test-output/iec61850_read
+
 rm -rf "$OUT"
 mkdir -p "$OUT"
-cd "$OUT"
 
-zeek -Cr /home/work/pcaps_dataset/client-server-mms.pcap \
-  packages \
-  /home/work/openSource/ics-security/icsnpp-mms/scripts
+ZEEKPATH_BASE=$("$ZEEK_DIST/build/zeek-path-dev")
+ZEEKPATH="$ZEEKPATH_BASE:$ROOT/icsnpp-tpkt/scripts:$ROOT/icsnpp-cotp/scripts:$ROOT/icsnpp-sess/scripts:$ROOT/icsnpp-pres/plugin/scripts:$ROOT/icsnpp-pres/scripts:$ROOT/icsnpp-acse/plugin/scripts:$ROOT/icsnpp-acse/scripts:$ROOT/icsnpp-mms/plugin/scripts:$ROOT/icsnpp-mms/scripts"
+ZEEK_PLUGIN_PATH="$ROOT/icsnpp-mms/build:$ROOT/icsnpp-pres/build:$ROOT/icsnpp-acse/build"
+
+(
+  cd "$OUT"
+  ZEEKPATH="$ZEEKPATH" ZEEK_PLUGIN_PATH="$ZEEK_PLUGIN_PATH" \
+    "$ZEEK" -Cr "$PCAPS/iec61850_read.pcap" \
+      "$ROOT/icsnpp-tpkt/build/tpkt.hlto" \
+      "$ROOT/icsnpp-cotp/build/cotp.hlto" \
+      "$ROOT/icsnpp-sess/build/sess.hlto" \
+      "$ROOT/icsnpp-tpkt/scripts" \
+      "$ROOT/icsnpp-cotp/scripts" \
+      "$ROOT/icsnpp-sess/scripts" \
+      "$ROOT/icsnpp-pres/plugin/scripts/__preload__.zeek" \
+      "$ROOT/icsnpp-pres/scripts" \
+      "$ROOT/icsnpp-acse/plugin/scripts/__preload__.zeek" \
+      "$ROOT/icsnpp-acse/plugin/scripts/events.zeek" \
+      "$ROOT/icsnpp-acse/scripts" \
+      "$ROOT/icsnpp-mms/plugin/scripts/__preload__.zeek" \
+      "$ROOT/icsnpp-mms/plugin/scripts/events.zeek" \
+      "$ROOT/icsnpp-mms/scripts" \
+      > zeek.stdout 2> zeek.stderr
+)
 ```
 
-### 批量 PCAP 回放
-
-下面脚本会回放 MMS 需求文档中的核心 PCAP，并打印每个样本生成了哪些 `.log` 文件及其数据行数。
+查看生成日志：
 
 ```bash
+find "$OUT" -maxdepth 1 -name '*.log' -printf '%f\n' | sort
+zeek-cut operation variable object_path ld ln do da success invoke_id \
+  < "$OUT/mms_var_access.log"
+```
+
+## 5. 批量 PCAP 回放
+
+下面脚本只覆盖 MMS 相关核心样本，不包含 GOOSE、Profinet、S7 等其它协议。
+
+```bash
+ROOT=/home/work/openSource/ics-security
+ZEEK_DIST=$ROOT/zeek-8.0.8
+ZEEK=$ZEEK_DIST/build/src/zeek
+PCAPS=/home/work/pcaps_dataset
 OUT=/tmp/icsnpp-mms-test-output
+
 rm -rf "$OUT"
 mkdir -p "$OUT"
 
-PCAPS=(
-  /home/work/pcaps_dataset/client-server-mms.pcap
-  /home/work/pcaps_dataset/client-server-mms-clean.pcap
-  /home/work/pcaps_dataset/iec61850_get_name_list.pcap
-  /home/work/pcaps_dataset/get_name_list_full_response.pcap
-  /home/work/pcaps_dataset/iec61850_read.pcap
-  /home/work/pcaps_dataset/mms-readRequest.pcap
-  /home/work/pcaps_dataset/iec61850_write.pcap
-  /home/work/pcaps_dataset/mms_write/write_02_domain_boolean_success_response.pcap
-  /home/work/pcaps_dataset/mms_file_transfer/iec61850_mms_file_download.pcap
-  /home/work/pcaps_dataset/mms_file_transfer/iec61850_mms_file_upload.pcap
-  /home/work/pcaps_dataset/initiate_error.pcap
-  /home/work/pcaps_dataset/conclude_error.pcap
+ZEEKPATH_BASE=$("$ZEEK_DIST/build/zeek-path-dev")
+ZEEKPATH="$ZEEKPATH_BASE:$ROOT/icsnpp-tpkt/scripts:$ROOT/icsnpp-cotp/scripts:$ROOT/icsnpp-sess/scripts:$ROOT/icsnpp-pres/plugin/scripts:$ROOT/icsnpp-pres/scripts:$ROOT/icsnpp-acse/plugin/scripts:$ROOT/icsnpp-acse/scripts:$ROOT/icsnpp-mms/plugin/scripts:$ROOT/icsnpp-mms/scripts"
+ZEEK_PLUGIN_PATH="$ROOT/icsnpp-mms/build:$ROOT/icsnpp-pres/build:$ROOT/icsnpp-acse/build"
+
+LOADS=(
+  "$ROOT/icsnpp-tpkt/build/tpkt.hlto"
+  "$ROOT/icsnpp-cotp/build/cotp.hlto"
+  "$ROOT/icsnpp-sess/build/sess.hlto"
+  "$ROOT/icsnpp-tpkt/scripts"
+  "$ROOT/icsnpp-cotp/scripts"
+  "$ROOT/icsnpp-sess/scripts"
+  "$ROOT/icsnpp-pres/plugin/scripts/__preload__.zeek"
+  "$ROOT/icsnpp-pres/scripts"
+  "$ROOT/icsnpp-acse/plugin/scripts/__preload__.zeek"
+  "$ROOT/icsnpp-acse/plugin/scripts/events.zeek"
+  "$ROOT/icsnpp-acse/scripts"
+  "$ROOT/icsnpp-mms/plugin/scripts/__preload__.zeek"
+  "$ROOT/icsnpp-mms/plugin/scripts/events.zeek"
+  "$ROOT/icsnpp-mms/scripts"
 )
 
-for pcap in "${PCAPS[@]}"; do
+MMS_PCAPS=(
+  "$PCAPS/client-server-mms.pcap"
+  "$PCAPS/client-server-mms-clean.pcap"
+  "$PCAPS/iec61850_full_session.pcap"
+  "$PCAPS/iec61850_get_name_list.pcap"
+  "$PCAPS/get_name_list_full_response.pcap"
+  "$PCAPS/iec61850_get_variable_access_attributes.pcap"
+  "$PCAPS/iec61850_get_named_variableList_attributes.pcap"
+  "$PCAPS/iec61850_read.pcap"
+  "$PCAPS/iec61850_read_variable_list_name.pcap"
+  "$PCAPS/mms-readRequest.pcap"
+  "$PCAPS/read_response_with_data.pcap"
+  "$PCAPS/iec61850_write.pcap"
+  "$PCAPS/mms_write/write_02_domain_boolean_success_response.pcap"
+  "$PCAPS/mms_write/write_04_variable_list_name_unsigned_success.pcap"
+  "$PCAPS/unconfirmed_information_report.pcap"
+  "$PCAPS/mms_file_transfer/iec61850_mms_file_download.pcap"
+  "$PCAPS/mms_file_transfer/iec61850_mms_file_upload.pcap"
+)
+
+failures=0
+
+for pcap in "${MMS_PCAPS[@]}"; do
   name=$(basename "$pcap" .pcap)
   run_dir="$OUT/$name"
   rm -rf "$run_dir"
@@ -115,23 +198,15 @@ for pcap in "${PCAPS[@]}"; do
 
   (
     cd "$run_dir"
-    zeek -Cr "$pcap" \
-      packages \
-      /home/work/openSource/ics-security/icsnpp-mms/scripts \
-      > zeek.stdout 2> zeek.stderr
+    ZEEKPATH="$ZEEKPATH" ZEEK_PLUGIN_PATH="$ZEEK_PLUGIN_PATH" \
+      "$ZEEK" -Cr "$pcap" "${LOADS[@]}" > zeek.stdout 2> zeek.stderr
   )
 
   status=$?
-  logs=$(find "$run_dir" -maxdepth 1 -name '*.log' -printf '%f ' | sort)
-  printf '%s | exit=%s | logs=%s\n' "$pcap" "$status" "$logs"
+  [ "$status" -eq 0 ] || failures=$((failures + 1))
+  printf '%s | exit=%s\n' "$name" "$status"
 
   for log in \
-    conn.log \
-    tpkt.log \
-    cotp_conn.log \
-    sess.log \
-    pres.log \
-    acse.log \
     mms.log \
     mms_name_list.log \
     mms_var_access.log \
@@ -146,42 +221,85 @@ for pcap in "${PCAPS[@]}"; do
   done
 
   if [ -s "$run_dir/zeek.stderr" ]; then
-    printf '  stderr='
-    tr '\n' ' ' < "$run_dir/zeek.stderr" | cut -c1-300
-    printf '\n'
+    grep -v 'Duplicate Zeekygen script documentation' "$run_dir/zeek.stderr" \
+      | sed 's/^/  stderr: /' \
+      | head -n 5
   fi
 done
+
+printf 'failures=%s output_dir=%s\n' "$failures" "$OUT"
+exit "$failures"
 ```
 
-## 5. 查看日志文件
+## 6. 日志抽查
 
-Zeek 会把日志写到执行 `zeek` 命令时所在的当前目录。如果先 `cd` 到 `/tmp/icsnpp-mms-test-output/client-server-mms` 后运行 Zeek，则日志就在该目录下。
-
-常见日志文件如下：
+常见日志：
 
 ```text
-conn.log                   Zeek TCP 连接日志
 tpkt.log                   TPKT 层日志
 cotp_conn.log              COTP 层日志
-sess.log                   Session 层日志
-pres.log                   Presentation 层日志
+sess.log                   SESS 层日志
+pres.log                   PRES 层日志
 acse.log                   ACSE 层日志
-mms.log                    MMS 会话/设备识别相关日志
-mms_name_list.log          GetNameList 相关日志
-mms_var_access.log         Read/Write 变量访问日志
-mms_varlist_access.log     变量列表访问日志
+mms.log                    MMS 会话摘要日志
+mms_name_list.log          GetNameList 日志
+mms_var_access.log         单变量 Read/Write/Report 日志
+mms_varlist_access.log     变量列表 Read/Write/Report 日志
 mms_var_attributes.log     GetVariableAccessAttributes 日志
 mms_varlist_attributes.log GetNamedVariableListAttributes 日志
 weird.log                  解析异常日志
 ```
 
-查看日志文件：
+单变量字段抽查：
 
 ```bash
-ls -lh
-zeek-cut < mms.log
-zeek-cut operation variable success diag < mms_var_access.log
-zeek-cut name addl < weird.log
+zeek-cut operation variable object_path ld ln do da success invoke_id \
+  < "$OUT/iec61850_read/mms_var_access.log"
 ```
 
-`zeek-cut operation variable success diag < mms_var_access.log` 仅适用于 `mms_var_access.log` 存在且包含对应字段的情况。
+变量列表字段抽查：
+
+```bash
+zeek-cut operation listname object_path listindex success invoke_id \
+  < "$OUT/write_04_variable_list_name_unsigned_success/mms_varlist_access.log"
+```
+
+解析异常抽查：
+
+```bash
+zeek-cut name addl < "$OUT/iec61850_read/weird.log"
+```
+
+`weird.log` 中出现 `mms_parse_error` 不一定代表 Zeek 运行失败。先看回放命令
+exit code；如果 exit 为 0 且业务日志已生成，说明本轮 smoke test 已跑通，
+具体解析覆盖问题可另开任务分析。
+
+## 7. 常见问题
+
+### 误加载旧 packages
+
+如果 stderr 出现类似下面的错误，通常是混用了旧版 `packages` 或
+`/usr/local/zeek/share/zeek/site/packages`：
+
+```text
+use of undeclared alternate prototype
+```
+
+处理方式：
+
+- 不要在命令中写 `packages`。
+- 不要加载 `/usr/local/zeek/share/zeek/site/packages/icsnpp-*`。
+- 确认 `ZEEKPATH` 和命令参数都指向 `/home/work/openSource/ics-security` 下的本地插件。
+
+### 缺少 TPKT/COTP/SESS analyzer
+
+如果只生成 `conn.log`、`tpkt.log` 或 `cotp_conn.log`，但没有上层
+`sess.log`、`pres.log`、`acse.log`、`mms.log`，检查是否加载了：
+
+```text
+icsnpp-tpkt/build/tpkt.hlto
+icsnpp-cotp/build/cotp.hlto
+icsnpp-sess/build/sess.hlto
+```
+
+以及对应的本地 scripts 目录。

@@ -10,8 +10,7 @@
 
 module mms;
 
-function test_connection(): connection
-    {
+function test_connection(): connection {
     local id: conn_id = [
         $orig_h=192.168.1.10,
         $orig_p=12000/tcp,
@@ -35,10 +34,9 @@ function test_connection(): connection
         $history="",
         $uid="Cuninvo"
     ];
-    }
+}
 
-event zeek_init()
-    {
+event zeek_init() {
     local c = test_connection();
     local variable_name: ObjectName = [$domain_specific=[$domainId="LD0", $itemId="ST"]];
     local list_name: ObjectName = [$vmd_specific="datasetR"];
@@ -65,4 +63,4 @@ event zeek_init()
         $listOfAccessResult=vector(list_result)
     ];
     event informationReport_evt(c, "resp_to_orig", list_report);
-    }
+}

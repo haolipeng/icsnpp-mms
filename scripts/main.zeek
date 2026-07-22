@@ -42,7 +42,7 @@ export {
 function get_info(c: connection): Info {
     if(!c?$mms_info) {
         local endpoint_fields = mms_endpoint_fields(c$id);
-        local outcome_fields = mms_outcome_fields();
+        local result_fields = mms_result_fields();
         c$mms_info = [
             $ts=network_time(),
             $uid=c$uid,
@@ -51,10 +51,10 @@ function get_info(c: connection): Info {
             $dst_ip=endpoint_fields$dst_ip,
             $src_port=endpoint_fields$src_port,
             $dst_port=endpoint_fields$dst_port,
-            $result=outcome_fields$result,
-            $error_code=outcome_fields$error_code,
-            $parse_status=outcome_fields$parse_status,
-            $parse_error=outcome_fields$parse_error
+            $result=result_fields$result,
+            $error_code=result_fields$error_code,
+            $parse_status=result_fields$parse_status,
+            $parse_error=result_fields$parse_error
         ];
     }
     return c$mms_info;

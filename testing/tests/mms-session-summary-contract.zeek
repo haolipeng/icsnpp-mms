@@ -7,8 +7,8 @@
 # @TEST-EXEC: check-mms-log-contract enum mms.log parse_status ok partial failed not_applicable
 # @TEST-EXEC: zeek-cut src_ip dst_ip src_port dst_port < mms.log > endpoints.out
 # @TEST-EXEC: btest-diff endpoints.out
-# @TEST-EXEC: zeek-cut result error_code parse_status parse_error < mms.log > outcome.out
-# @TEST-EXEC: btest-diff outcome.out
+# @TEST-EXEC: zeek-cut result error_code parse_status parse_error < mms.log > result-fields.out
+# @TEST-EXEC: btest-diff result-fields.out
 # @TEST-EXEC: zeek-cut deviceVendor deviceModel deviceRevision < mms.log > identity.out
 # @TEST-EXEC: btest-diff identity.out
 # @TEST-EXEC-FAIL: check-mms-log-contract fields mms.log src_mac 2> no-src-mac.err
@@ -43,8 +43,7 @@
 
 module mms;
 
-event zeek_init()
-    {
+event zeek_init() {
     local id: conn_id = [
         $orig_h=192.168.1.10,
         $orig_p=12000/tcp,
@@ -77,4 +76,4 @@ event zeek_init()
 
     event IdentifyResponse(c, "resp_to_orig", ident);
     event connection_state_remove(c);
-    }
+}

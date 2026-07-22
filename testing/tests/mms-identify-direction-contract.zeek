@@ -3,13 +3,11 @@
 
 module mms;
 
-event IdentifyResponse(c: connection, direction: string, id: Identify_Response)
-    {
+event IdentifyResponse(c: connection, direction: string, id: Identify_Response) {
     print fmt("identify=%s", direction);
-    }
+}
 
-event zeek_init()
-    {
+event zeek_init() {
     local id: conn_id = [
         $orig_h=192.168.1.10,
         $orig_p=12000/tcp,
@@ -49,4 +47,4 @@ event zeek_init()
 
     event mms_pdu(c, T, pdu);
     event mms_pdu(c, F, pdu);
-    }
+}

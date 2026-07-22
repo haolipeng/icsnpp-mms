@@ -4,14 +4,13 @@
 
 module mms;
 
-event zeek_init()
-    {
-    local outcome = mms_outcome_fields(
+event zeek_init() {
+    local result_fields = mms_result_fields(
         "success",
         "none",
         "",
         "maybe",
         "none");
 
-    print outcome$parse_status;
-    }
+    print result_fields$parse_status;
+}
