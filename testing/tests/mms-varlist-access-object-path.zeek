@@ -5,8 +5,7 @@
 
 module mms;
 
-function test_connection(): connection
-    {
+function test_connection(): connection {
     local id: conn_id = [
         $orig_h=192.168.1.10,
         $orig_p=12000/tcp,
@@ -30,10 +29,9 @@ function test_connection(): connection
         $history="",
         $uid="Cvarlistpath"
     ];
-    }
+}
 
-event zeek_init()
-    {
+event zeek_init() {
     local c = test_connection();
     local value: Data = [$boolean=T];
 
@@ -47,4 +45,4 @@ event zeek_init()
 
     local aa_list: ObjectName = [$aa_specific="AssocDataset"];
     event VariableListReport(c, "resp_to_orig", aa_list, 4, value);
-    }
+}

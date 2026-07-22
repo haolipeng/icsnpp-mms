@@ -8,8 +8,7 @@
 
 module mms;
 
-function test_connection(): connection
-    {
+function test_connection(): connection {
     local id: conn_id = [
         $orig_h=192.168.1.10,
         $orig_p=12000/tcp,
@@ -33,10 +32,9 @@ function test_connection(): connection
         $history="",
         $uid="Creadinvoke"
     ];
-    }
+}
 
-event zeek_init()
-    {
+event zeek_init() {
     local c = test_connection();
     local request_name: ObjectName = [$domain_specific=[$domainId="LD0", $itemId="ST"]];
     local response_name: ObjectName = [$domain_specific=[$domainId="LD0", $itemId="MX"]];
@@ -87,4 +85,4 @@ event zeek_init()
         $listOfAccessResult=vector(list_result)
     ];
     event readResponse(c, "resp_to_orig", 99, list_response);
-    }
+}

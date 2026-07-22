@@ -1,6 +1,6 @@
 endpoint=192.168.1.10,192.168.1.20,12000/tcp,102/tcp
-outcome=success,none,F,ok,none
-partial-outcome=partial,request_response_unmatched
+result-fields=success,none,F,ok,none
+partial-result-fields=partial,request_response_unmatched
 parse-status-values=T,T,T,T,F
 parse-error-values=T,T,T,T,T,T,T,T,F
 risk=T,F
