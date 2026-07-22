@@ -52,30 +52,6 @@ function name_list_object_path(scope: string, domain: string): string {
     return "<unknown>";
 }
 
-# 将服务错误 diag 映射为稳定 error_code；未覆盖的错误统一归为 unknown_error。
-function service_error_code(diag: string): string {
-    if(diag == "ServiceError_object_undefined")
-        return "object_undefined";
-    if(diag == "ServiceError_invalid_address")
-        return "invalid_address";
-    if(diag == "ServiceError_type_unsupported")
-        return "type_unsupported";
-    if(diag == "ServiceError_type_inconsistent")
-        return "type_inconsistent";
-    if(diag == "ServiceError_object_attribute_inconsistent")
-        return "object_attribute_inconsistent";
-    if(diag == "ServiceError_object_access_unsupported")
-        return "object_access_unsupported";
-    if(diag == "ServiceError_object_non_existent")
-        return "object_non_existent";
-    if(diag == "ServiceError_object_access_denied")
-        return "object_access_denied";
-    if(diag == "ServiceError_object_invalidated")
-        return "object_invalidated";
-
-    return "unknown_error";
-}
-
 event zeek_init() &priority=5
 {
     # Log::create_stream 注册一条日志流，三个参数含义如下：
@@ -185,7 +161,7 @@ event NameListError (c: connection, direction: string, invokeID: int, request: G
 
     local endpoint_fields = mms_endpoint_fields(c$id);
     local diag = errorClass_to_string(response$serviceError);
-    local result_fields = mms_result_fields("failure", service_error_code(diag), diag);
+    local result_fields = mms_result_fields("failure", mms_service_error_code(diag), diag);
 
     # 组装日志记录（失败），diag 为服务错误码
     local rec: NameListRecord = record(

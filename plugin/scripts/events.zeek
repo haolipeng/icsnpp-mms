@@ -79,8 +79,8 @@ export {
     global NameList: event(c: connection, direction: string, invokeID: int, request: GetNameList_Request, response: GetNameList_Response);
     global NameListError: event (c: connection, direction: string, invokeID: int, request: GetNameList_Request, response: Confirmed_ErrorPDU);
 
-    global VariableAccessAttributes: event(c: connection, direction: string, request: GetVariableAccessAttributes_Request, response: GetVariableAccessAttributes_Response);
-    global VariableAccessAttributesError: event(c: connection, direction: string, request: GetVariableAccessAttributes_Request, response: Confirmed_ErrorPDU);
+    global VariableAccessAttributes: event(c: connection, direction: string, invokeID: int, request: GetVariableAccessAttributes_Request, response: GetVariableAccessAttributes_Response);
+    global VariableAccessAttributesError: event(c: connection, direction: string, invokeID: int, request: GetVariableAccessAttributes_Request, response: Confirmed_ErrorPDU);
 
     global NamedVariableListAttributes: event(c: connection, direction: string, request: GetNamedVariableListAttributes_Request, response: GetNamedVariableListAttributes_Response);
     global NamedVariableListAttributesError: event(c: connection, direction: string, request: GetNamedVariableListAttributes_Request, response: Confirmed_ErrorPDU);
@@ -396,7 +396,7 @@ event getVariableAccessAttributesRequest(c: connection, direction: string, invok
 
 event getVariableAccessAttributesResponse(c: connection, direction: string, invokeID: int, pdu: GetVariableAccessAttributes_Response) {
     if(invokeID in c $ mms_get_variable_access_attributes_request)
-        event VariableAccessAttributes(c, direction, c $ mms_get_variable_access_attributes_request[invokeID], pdu);
+        event VariableAccessAttributes(c, direction, invokeID, c $ mms_get_variable_access_attributes_request[invokeID], pdu);
 }
 
 event getNamedVariableListAttributesRequest(c: connection, direction: string, invokeID: int, pdu: GetNamedVariableListAttributes_Request) {
@@ -415,7 +415,7 @@ event getNamedVariableListAttributesResponse(c: connection, direction: string, i
 # =====================================================================
 event confirmedErrorPDU_evt(c: connection, direction: string, invokeID: int, pdu: Confirmed_ErrorPDU) {
     if(invokeID in c $ mms_get_variable_access_attributes_request)
-        event VariableAccessAttributesError(c, direction, c $ mms_get_variable_access_attributes_request[invokeID], pdu);
+        event VariableAccessAttributesError(c, direction, invokeID, c $ mms_get_variable_access_attributes_request[invokeID], pdu);
     else if(invokeID in c $ mms_name_list_requests)
         event NameListError(c, direction, invokeID, c $ mms_name_list_requests[invokeID], pdu);
     else if(invokeID in c $ mms_get_named_variable_list_attributes_request)

@@ -63,6 +63,7 @@ export {
         parse_status: string &default="ok",
         parse_error: string &default="none"
     ): MMS_ResultFields;
+    global mms_service_error_code: function(diag: string): string;
     global mms_is_high_risk_operation: function(operation: string): bool;
     global mms_object_path_fields: function(name: ObjectName): MMS_ObjectPathFields;
 }
@@ -104,6 +105,29 @@ function mms_result_fields(
 
 function mms_is_high_risk_operation(operation: string): bool {
     return operation in mms_high_risk_operations;
+}
+
+function mms_service_error_code(diag: string): string {
+    if(diag == "ServiceError_object_undefined")
+        return "object_undefined";
+    if(diag == "ServiceError_invalid_address")
+        return "invalid_address";
+    if(diag == "ServiceError_type_unsupported")
+        return "type_unsupported";
+    if(diag == "ServiceError_type_inconsistent")
+        return "type_inconsistent";
+    if(diag == "ServiceError_object_attribute_inconsistent")
+        return "object_attribute_inconsistent";
+    if(diag == "ServiceError_object_access_unsupported")
+        return "object_access_unsupported";
+    if(diag == "ServiceError_object_non_existent")
+        return "object_non_existent";
+    if(diag == "ServiceError_object_access_denied")
+        return "object_access_denied";
+    if(diag == "ServiceError_object_invalidated")
+        return "object_invalidated";
+
+    return "unknown_error";
 }
 
 function remove_ns(val: string): string {

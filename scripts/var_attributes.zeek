@@ -11,6 +11,18 @@ export {
         ts:         time     &log;
         uid:        string   &log;
         id:         conn_id  &log;
+        src_ip:     addr     &log;
+        dst_ip:     addr     &log;
+        src_port:   port     &log;
+        dst_port:   port     &log;
+        direction:  string   &log;
+        invoke_id:  int      &log;
+        operation:  string   &log;
+        object_path: string  &log;
+        result:     string   &log;
+        error_code: string   &log;
+        parse_status: string &log;
+        parse_error: string  &log;
         variable:   string   &log;
         attributes: string   &log &optional;
         success:    bool     &log;
@@ -39,15 +51,31 @@ event zeek_init() &priority=5
 # 监听 events.zeek 的配对级事件 VariableAccessAttributes
 # （GetVariableAccessAttributes 请求与响应按 invokeID 配对后）→ mms_var_attributes.log
 # =====================================================================
-event VariableAccessAttributes(c: connection, direction: string, request: GetVariableAccessAttributes_Request, response: GetVariableAccessAttributes_Response) {
+event VariableAccessAttributes(c: connection, direction: string, invokeID: int, request: GetVariableAccessAttributes_Request, response: GetVariableAccessAttributes_Response) {
 
     if(!log_var_attributes) return;
+
+    local endpoint_fields = mms_endpoint_fields(c$id);
+    local object_fields = mms_object_path_fields(request$name);
+    local result_fields = mms_result_fields();
 
     # 组装日志记录（成功）：变量名来自请求，类型说明来自响应
     local rec=record(
         $ts=network_time(),
         $uid=c$uid,
         $id=c$id,
+        $src_ip=endpoint_fields$src_ip,
+        $dst_ip=endpoint_fields$dst_ip,
+        $src_port=endpoint_fields$src_port,
+        $dst_port=endpoint_fields$dst_port,
+        $direction=direction,
+        $invoke_id=invokeID,
+        $operation="get_variable_access_attributes",
+        $object_path=object_fields$object_path,
+        $result=result_fields$result,
+        $error_code=result_fields$error_code,
+        $parse_status=result_fields$parse_status,
+        $parse_error=result_fields$parse_error,
         $variable=objectName_to_string(request$name),
         $attributes=typeSpecification_to_string(response$typeSpecification, objectName_to_string(request$name)),
         $success=T
@@ -57,18 +85,35 @@ event VariableAccessAttributes(c: connection, direction: string, request: GetVar
 }
 
 # GetVariableAccessAttributes 失败（confirmed 错误与缓存请求配对后触发）
-event VariableAccessAttributesError(c: connection, direction: string, request: GetVariableAccessAttributes_Request, response: Confirmed_ErrorPDU) {
+event VariableAccessAttributesError(c: connection, direction: string, invokeID: int, request: GetVariableAccessAttributes_Request, response: Confirmed_ErrorPDU) {
 
     if(!log_var_attributes) return;
+
+    local endpoint_fields = mms_endpoint_fields(c$id);
+    local object_fields = mms_object_path_fields(request$name);
+    local diag = errorClass_to_string(response$serviceError);
+    local result_fields = mms_result_fields("failure", mms_service_error_code(diag), diag);
 
     # 组装日志记录（失败），diag 为服务错误码
     local rec=record(
         $ts=network_time(),
         $uid=c$uid,
         $id=c$id,
+        $src_ip=endpoint_fields$src_ip,
+        $dst_ip=endpoint_fields$dst_ip,
+        $src_port=endpoint_fields$src_port,
+        $dst_port=endpoint_fields$dst_port,
+        $direction=direction,
+        $invoke_id=invokeID,
+        $operation="get_variable_access_attributes",
+        $object_path=object_fields$object_path,
+        $result=result_fields$result,
+        $error_code=result_fields$error_code,
+        $parse_status=result_fields$parse_status,
+        $parse_error=result_fields$parse_error,
         $variable=objectName_to_string(request$name),
         $success=F,
-        $diag=errorClass_to_string(response$serviceError)
+        $diag=diag
     );
 
     Log::write(LOG_VAA, rec);

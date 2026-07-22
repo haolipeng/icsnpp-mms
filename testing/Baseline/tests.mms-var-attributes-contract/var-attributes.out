@@ -1,0 +1,2 @@
+192.168.1.10	192.168.1.20	12000	102	resp_to_orig	801	get_variable_access_attributes	domain:LD0/LLN0$Mod$stVal	success	none	-	ok	none	LD0::LLN0$Mod$stVal	{"name": "LD0::LLN0$Mod$stVal", "type": "boolean"}	T
+192.168.1.10	192.168.1.20	12000	102	resp_to_orig	802	get_variable_access_attributes	vmd:GlobalVar	failure	object_undefined	ServiceError_object_undefined	ok	none	GlobalVar	-	F
