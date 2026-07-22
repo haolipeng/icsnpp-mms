@@ -16,6 +16,7 @@ export {
         object_path: string &log;
         result:    string   &log;
         error_code: string  &log;
+        is_high_risk_operation: bool &log;
         ld:        string   &log &optional;
         ln:        string   &log &optional;
         do:        string   &log &optional;
@@ -36,6 +37,7 @@ export {
         object_path: string &log;
         result:    string   &log;
         error_code: string  &log;
+        is_high_risk_operation: bool &log;
         listindex: count    &log;
         value:     string   &log &optional;
         success:   bool     &log;
@@ -136,6 +138,7 @@ event VariableReadRequest(c: connection, direction: string, invokeID: int, name:
         $object_path="",
         $result="success",
         $error_code="none",
+        $is_high_risk_operation=mms_is_high_risk_operation("read_request"),
         $success=T,
         $invoke_id=invokeID
     ];
@@ -157,6 +160,7 @@ event VariableReadResponse(c: connection, direction: string, invokeID: int, name
         $object_path="",
         $result="success",
         $error_code="none",
+        $is_high_risk_operation=mms_is_high_risk_operation("read"),
         $value=data_to_string(data),
         $success=T,
         $invoke_id=invokeID
@@ -179,6 +183,7 @@ event VariableWriteRequest(c: connection, direction: string, invokeID: int, name
         $object_path="",
         $result="success",
         $error_code="none",
+        $is_high_risk_operation=mms_is_high_risk_operation("write_request"),
         $value=data_to_string(data),
         $success=T,
         $invoke_id=invokeID
@@ -201,6 +206,7 @@ event VariableWriteResponse(c: connection, direction: string, invokeID: int, nam
         $object_path="",
         $result="success",
         $error_code="none",
+        $is_high_risk_operation=mms_is_high_risk_operation("write"),
         $value=data_to_string(data),
         $success=T,
         $invoke_id=invokeID
@@ -223,6 +229,7 @@ event VariableReadResponseError(c: connection, direction: string, invokeID: int,
         $object_path="",
         $result="failure",
         $error_code=data_access_error_code(error),
+        $is_high_risk_operation=mms_is_high_risk_operation("read"),
         $success=F,
         $diag=remove_ns(cat(error)),
         $invoke_id=invokeID
@@ -245,6 +252,7 @@ event VariableWriteResponseError(c: connection, direction: string, invokeID: int
         $object_path="",
         $result="failure",
         $error_code=data_access_error_code(error),
+        $is_high_risk_operation=mms_is_high_risk_operation("write"),
         $value=data_to_string(data),
         $success=F,
         $diag=remove_ns(cat(error)),
@@ -272,6 +280,7 @@ event VariableListReadRequest(c: connection, direction: string, invokeID: int, l
         $object_path="",
         $result="success",
         $error_code="none",
+        $is_high_risk_operation=mms_is_high_risk_operation("read_request"),
         $listindex=0,
         $success=T,
         $invoke_id=invokeID
@@ -294,6 +303,7 @@ event VariableListReadResponse(c: connection, direction: string, invokeID: int, 
         $object_path="",
         $result="success",
         $error_code="none",
+        $is_high_risk_operation=mms_is_high_risk_operation("read"),
         $listindex=listindex,
         $value=data_to_string(data),
         $success=T,
@@ -317,6 +327,7 @@ event VariableListReadResponseError(c: connection, direction: string, invokeID: 
         $object_path="",
         $result="failure",
         $error_code=data_access_error_code(error),
+        $is_high_risk_operation=mms_is_high_risk_operation("read"),
         $listindex=listindex,
         $success=F,
         $diag=remove_ns(cat(error)),
@@ -339,6 +350,7 @@ event VariableListWriteRequest(c: connection, direction: string, invokeID: int, 
         $object_path="",
         $result="success",
         $error_code="none",
+        $is_high_risk_operation=mms_is_high_risk_operation("write_request"),
         $listindex=0,
         $value=data_to_string(data),
         $success=T,
@@ -362,6 +374,7 @@ event VariableListWriteResponse(c: connection, direction: string, invokeID: int,
         $object_path="",
         $result="success",
         $error_code="none",
+        $is_high_risk_operation=mms_is_high_risk_operation("write"),
         $listindex=listindex,
         $value=data_to_string(data),
         $success=T,
@@ -385,6 +398,7 @@ event VariableListWriteResponseError(c: connection, direction: string, invokeID:
         $object_path="",
         $result="failure",
         $error_code=data_access_error_code(error),
+        $is_high_risk_operation=mms_is_high_risk_operation("write"),
         $listindex=listindex,
         $value=data_to_string(data),
         $success=F,
@@ -415,6 +429,7 @@ event VariableReport(c: connection, direction: string, name: ObjectName, data: D
         $object_path="",
         $result="success",
         $error_code="none",
+        $is_high_risk_operation=mms_is_high_risk_operation("report"),
         $value=data_to_string(data),
         $success=T
     ];
@@ -436,6 +451,7 @@ event VariableReportError(c: connection, direction: string, name: ObjectName, er
         $object_path="",
         $result="failure",
         $error_code=data_access_error_code(error),
+        $is_high_risk_operation=mms_is_high_risk_operation("report"),
         $success=F,
         $diag=remove_ns(cat(error))
     ];
@@ -456,6 +472,7 @@ event VariableListReport(c: connection, direction: string, listname: ObjectName,
         $object_path="",
         $result="success",
         $error_code="none",
+        $is_high_risk_operation=mms_is_high_risk_operation("report"),
         $listindex=listindex,
         $value=data_to_string(data),
         $success=T
@@ -477,6 +494,7 @@ event VariableListReportError(c: connection, direction: string, listname: Object
         $object_path="",
         $result="failure",
         $error_code=data_access_error_code(error),
+        $is_high_risk_operation=mms_is_high_risk_operation("report"),
         $listindex=listindex,
         $success=F,
         $diag=remove_ns(cat(error))

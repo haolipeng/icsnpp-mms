@@ -1,0 +1,3 @@
+read	LD0::ST	F
+write	LD0::ST	T
+report	LD0::ST	F
