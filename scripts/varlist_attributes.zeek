@@ -11,6 +11,18 @@ export {
         ts:         time     &log;
         uid:        string   &log;
         id:         conn_id  &log;
+        src_ip:     addr     &log;
+        dst_ip:     addr     &log;
+        src_port:   port     &log;
+        dst_port:   port     &log;
+        direction:  string   &log;
+        invoke_id:  int      &log;
+        operation:  string   &log;
+        object_path: string  &log;
+        result:     string   &log;
+        error_code: string   &log;
+        parse_status: string &log;
+        parse_error: string  &log;
         list:       string   &log &optional;
         attributes: string   &log &optional;
         success:    bool     &log;
@@ -39,12 +51,15 @@ event zeek_init() &priority=5
 }
 
 # =====================================================================
-# 监听 events.zeek 的配对级事件 NamedVariableListAttributes
-# （GetNamedVariableListAttributes 请求与响应按 invokeID 配对后）→ mms_varlist_attributes.log
+# 监听配对级事件：变量列表名来自请求，成员变量列表来自响应。
 # =====================================================================
-event NamedVariableListAttributes(c: connection, direction: string, request: GetNamedVariableListAttributes_Request, response: GetNamedVariableListAttributes_Response) {
+event NamedVariableListAttributes(c: connection, direction: string, invokeID: int, request: GetNamedVariableListAttributes_Request, response: GetNamedVariableListAttributes_Response) {
 
     if(!log_varlist_attributes) return;
+
+    local endpoint_fields = mms_endpoint_fields(c$id);
+    local object_fields = mms_object_path_fields(request);
+    local result_fields = mms_result_fields();
 
     # 请求本身是 ObjectName，即变量列表名
     local list = objectName_to_string(request);
@@ -64,6 +79,18 @@ event NamedVariableListAttributes(c: connection, direction: string, request: Get
         $ts=network_time(),
         $uid=c$uid,
         $id=c$id,
+        $src_ip=endpoint_fields$src_ip,
+        $dst_ip=endpoint_fields$dst_ip,
+        $src_port=endpoint_fields$src_port,
+        $dst_port=endpoint_fields$dst_port,
+        $direction=direction,
+        $invoke_id=invokeID,
+        $operation="get_named_variable_list_attributes",
+        $object_path=object_fields$object_path,
+        $result=result_fields$result,
+        $error_code=result_fields$error_code,
+        $parse_status=result_fields$parse_status,
+        $parse_error=result_fields$parse_error,
         $list=list,
         $attributes=attributes,
         $success=T
@@ -73,9 +100,14 @@ event NamedVariableListAttributes(c: connection, direction: string, request: Get
 }
 
 # GetNamedVariableListAttributes 失败（confirmed 错误与缓存请求配对后触发）
-event NamedVariableListAttributesError (c: connection, direction: string, request: GetNamedVariableListAttributes_Request, response: Confirmed_ErrorPDU) {
+event NamedVariableListAttributesError (c: connection, direction: string, invokeID: int, request: GetNamedVariableListAttributes_Request, response: Confirmed_ErrorPDU) {
 
     if(!log_varlist_attributes) return;
+
+    local endpoint_fields = mms_endpoint_fields(c$id);
+    local object_fields = mms_object_path_fields(request);
+    local diag = errorClass_to_string(response$serviceError);
+    local result_fields = mms_result_fields("failure", mms_service_error_code(diag), diag);
 
     # 请求本身是 ObjectName，即变量列表名
     local list = objectName_to_string(request);
@@ -85,9 +117,21 @@ event NamedVariableListAttributesError (c: connection, direction: string, reques
         $ts=network_time(),
         $uid=c$uid,
         $id=c$id,
+        $src_ip=endpoint_fields$src_ip,
+        $dst_ip=endpoint_fields$dst_ip,
+        $src_port=endpoint_fields$src_port,
+        $dst_port=endpoint_fields$dst_port,
+        $direction=direction,
+        $invoke_id=invokeID,
+        $operation="get_named_variable_list_attributes",
+        $object_path=object_fields$object_path,
+        $result=result_fields$result,
+        $error_code=result_fields$error_code,
+        $parse_status=result_fields$parse_status,
+        $parse_error=result_fields$parse_error,
         $list=list,
         $success=F,
-        $diag=errorClass_to_string(response$serviceError)
+        $diag=diag
     );
 
     Log::write(LOG_VARLIST_ATTR, rec);

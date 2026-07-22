@@ -1,0 +1,2 @@
+192.168.1.10	192.168.1.20	12000	102	resp_to_orig	901	get_named_variable_list_attributes	domain:LD0/DatasetA	success	none	-	ok	none	LD0::DatasetA	["LD0::LLN0$Mod$stVal"]	T
+192.168.1.10	192.168.1.20	12000	102	resp_to_orig	902	get_named_variable_list_attributes	vmd:DatasetB	failure	object_access_denied	ServiceError_object_access_denied	ok	none	DatasetB	-	F
