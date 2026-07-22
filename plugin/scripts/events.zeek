@@ -41,6 +41,7 @@ export {
     global getNamedVariableListAttributesResponse: event(c: connection, direction: string, invokeID: int, pdu: GetNamedVariableListAttributes_Response);
     global informationReport_evt: event(c: connection, direction: string, pdu: InformationReport);
     global confirmedErrorPDU_evt: event(c: connection, direction: string, invokeID: int, pdu: Confirmed_ErrorPDU);
+    global UnmatchedConfirmedError: event(c: connection, direction: string, invokeID: int, pdu: Confirmed_ErrorPDU);
 
     # =====================================================================
     # 见到 identify 响应时触发下列事件
@@ -443,4 +444,6 @@ event confirmedErrorPDU_evt(c: connection, direction: string, invokeID: int, pdu
         event NameListError(c, direction, invokeID, c $ mms_name_list_requests[invokeID], pdu);
     else if(invokeID in c $ mms_get_named_variable_list_attributes_request)
         event NamedVariableListAttributesError(c, direction, invokeID, c $ mms_get_named_variable_list_attributes_request[invokeID], pdu);
+    else
+        event UnmatchedConfirmedError(c, direction, invokeID, pdu);
 }
