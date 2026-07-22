@@ -31,6 +31,7 @@ export {
         id:        conn_id  &log;
         operation: string   &log;
         listname:  string   &log;
+        object_path: string &log;
         listindex: count    &log;
         value:     string   &log &optional;
         success:   bool     &log;
@@ -49,6 +50,7 @@ export {
     const log_var_access: bool = T &redef;
 }
 
+# 补充单变量日志的 object_path，并尽力拆分 ld/ln/do/da。
 function add_object_path_fields(rec: VariableAccess, name: ObjectName): VariableAccess {
     local object_fields = mms_object_path_fields(name);
 
@@ -61,6 +63,14 @@ function add_object_path_fields(rec: VariableAccess, name: ObjectName): Variable
         rec$do = object_fields$do;
     if(object_fields?$da)
         rec$da = object_fields$da;
+
+    return rec;
+}
+
+# 补充变量列表日志的 object_path，listname/listindex 保持原语义。
+function add_varlist_object_path_fields(rec: VariableListAccess, listname: ObjectName): VariableListAccess {
+    local object_fields = mms_object_path_fields(listname);
+    rec$object_path = object_fields$object_path;
 
     return rec;
 }
@@ -214,10 +224,12 @@ event VariableListReadRequest(c: connection, direction: string, invokeID: int, l
         $id=c$id,
         $operation="read_request",
         $listname=objectName_to_string(listname),
+        $object_path="",
         $listindex=0,
         $success=T,
         $invoke_id=invokeID
     ];
+    rec = add_varlist_object_path_fields(rec, listname);
 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
@@ -232,11 +244,13 @@ event VariableListReadResponse(c: connection, direction: string, invokeID: int, 
         $id=c$id,
         $operation="read",
         $listname=objectName_to_string(listname),
+        $object_path="",
         $listindex=listindex,
         $value=data_to_string(data),
         $success=T,
         $invoke_id=invokeID
     ];
+    rec = add_varlist_object_path_fields(rec, listname);
 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
@@ -251,11 +265,13 @@ event VariableListReadResponseError(c: connection, direction: string, invokeID: 
         $id=c$id,
         $operation="read",
         $listname=objectName_to_string(listname),
+        $object_path="",
         $listindex=listindex,
         $success=F,
         $diag=remove_ns(cat(error)),
         $invoke_id=invokeID
     ];
+    rec = add_varlist_object_path_fields(rec, listname);
 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
@@ -269,11 +285,13 @@ event VariableListWriteRequest(c: connection, direction: string, invokeID: int, 
         $id=c$id,
         $operation="write_request",
         $listname=objectName_to_string(listname),
+        $object_path="",
         $listindex=0,
         $value=data_to_string(data),
         $success=T,
         $invoke_id=invokeID
     ];
+    rec = add_varlist_object_path_fields(rec, listname);
 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
@@ -288,11 +306,13 @@ event VariableListWriteResponse(c: connection, direction: string, invokeID: int,
         $id=c$id,
         $operation="write",
         $listname=objectName_to_string(listname),
+        $object_path="",
         $listindex=listindex,
         $value=data_to_string(data),
         $success=T,
         $invoke_id=invokeID
     ];
+    rec = add_varlist_object_path_fields(rec, listname);
 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
@@ -307,12 +327,14 @@ event VariableListWriteResponseError(c: connection, direction: string, invokeID:
         $id=c$id,
         $operation="write",
         $listname=objectName_to_string(listname),
+        $object_path="",
         $listindex=listindex,
         $value=data_to_string(data),
         $success=F,
         $diag=remove_ns(cat(error)),
         $invoke_id=invokeID
     ];
+    rec = add_varlist_object_path_fields(rec, listname);
 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
@@ -370,10 +392,12 @@ event VariableListReport(c: connection, direction: string, listname: ObjectName,
         $id=c$id,
         $operation="report",
         $listname=objectName_to_string(listname),
+        $object_path="",
         $listindex=listindex,
         $value=data_to_string(data),
         $success=T
     ];
+    rec = add_varlist_object_path_fields(rec, listname);
 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
@@ -387,10 +411,12 @@ event VariableListReportError(c: connection, direction: string, listname: Object
         $id=c$id,
         $operation="report",
         $listname=objectName_to_string(listname),
+        $object_path="",
         $listindex=listindex,
         $success=F,
         $diag=remove_ns(cat(error))
     ];
+    rec = add_varlist_object_path_fields(rec, listname);
 
     Log::write(LOG_VARLIST_ACCESS, rec);
 }
