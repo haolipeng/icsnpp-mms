@@ -1,0 +1,6 @@
+read	LD0::DatasetR	success	none	1	T	-	501
+write	DatasetW	success	none	2	T	-	503
+report	DatasetReport (aa)	success	none	3	T	-	-
+read	LD0::DatasetR	failure	object_access_denied	4	F	DataAccessError_object_access_denied	502
+write	DatasetW	failure	hardware_fault	5	F	hardware_fault	504
+report	DatasetReport (aa)	failure	unknown_error	6	F	object_value_invalid	-

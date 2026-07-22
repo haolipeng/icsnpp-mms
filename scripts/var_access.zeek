@@ -34,6 +34,8 @@ export {
         operation: string   &log;
         listname:  string   &log;
         object_path: string &log;
+        result:    string   &log;
+        error_code: string  &log;
         listindex: count    &log;
         value:     string   &log &optional;
         success:   bool     &log;
@@ -268,6 +270,8 @@ event VariableListReadRequest(c: connection, direction: string, invokeID: int, l
         $operation="read_request",
         $listname=objectName_to_string(listname),
         $object_path="",
+        $result="success",
+        $error_code="none",
         $listindex=0,
         $success=T,
         $invoke_id=invokeID
@@ -288,6 +292,8 @@ event VariableListReadResponse(c: connection, direction: string, invokeID: int, 
         $operation="read",
         $listname=objectName_to_string(listname),
         $object_path="",
+        $result="success",
+        $error_code="none",
         $listindex=listindex,
         $value=data_to_string(data),
         $success=T,
@@ -309,6 +315,8 @@ event VariableListReadResponseError(c: connection, direction: string, invokeID: 
         $operation="read",
         $listname=objectName_to_string(listname),
         $object_path="",
+        $result="failure",
+        $error_code=data_access_error_code(error),
         $listindex=listindex,
         $success=F,
         $diag=remove_ns(cat(error)),
@@ -329,6 +337,8 @@ event VariableListWriteRequest(c: connection, direction: string, invokeID: int, 
         $operation="write_request",
         $listname=objectName_to_string(listname),
         $object_path="",
+        $result="success",
+        $error_code="none",
         $listindex=0,
         $value=data_to_string(data),
         $success=T,
@@ -350,6 +360,8 @@ event VariableListWriteResponse(c: connection, direction: string, invokeID: int,
         $operation="write",
         $listname=objectName_to_string(listname),
         $object_path="",
+        $result="success",
+        $error_code="none",
         $listindex=listindex,
         $value=data_to_string(data),
         $success=T,
@@ -371,6 +383,8 @@ event VariableListWriteResponseError(c: connection, direction: string, invokeID:
         $operation="write",
         $listname=objectName_to_string(listname),
         $object_path="",
+        $result="failure",
+        $error_code=data_access_error_code(error),
         $listindex=listindex,
         $value=data_to_string(data),
         $success=F,
@@ -440,6 +454,8 @@ event VariableListReport(c: connection, direction: string, listname: ObjectName,
         $operation="report",
         $listname=objectName_to_string(listname),
         $object_path="",
+        $result="success",
+        $error_code="none",
         $listindex=listindex,
         $value=data_to_string(data),
         $success=T
@@ -459,6 +475,8 @@ event VariableListReportError(c: connection, direction: string, listname: Object
         $operation="report",
         $listname=objectName_to_string(listname),
         $object_path="",
+        $result="failure",
+        $error_code=data_access_error_code(error),
         $listindex=listindex,
         $success=F,
         $diag=remove_ns(cat(error))
