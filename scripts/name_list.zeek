@@ -11,6 +11,18 @@ export {
         ts:         time     &log;
         uid:        string   &log;
         id:         conn_id  &log;
+        src_ip:     addr     &log;
+        dst_ip:     addr     &log;
+        src_port:   port     &log;
+        dst_port:   port     &log;
+        direction:  string   &log;
+        invoke_id:  int      &log;
+        operation:  string   &log;
+        object_path: string  &log;
+        result:     string   &log;
+        error_code: string   &log;
+        parse_status: string &log;
+        parse_error: string  &log;
         class:      string   &log &optional;
         scope:      string   &log &optional;
         domain:      string   &log &optional;
@@ -28,6 +40,42 @@ export {
     const log_name_list: bool = T &redef;
 }
 
+# 将 GetNameList 查询范围转换为日志中的 object_path。
+function name_list_object_path(scope: string, domain: string): string {
+    if(scope == "domainSpecific")
+        return "domain:" + domain;
+    if(scope == "vmdSpecific")
+        return "vmd";
+    if(scope == "aaSpecific")
+        return "aa";
+
+    return "<unknown>";
+}
+
+# 将服务错误 diag 映射为稳定 error_code；未覆盖的错误统一归为 unknown_error。
+function service_error_code(diag: string): string {
+    if(diag == "ServiceError_object_undefined")
+        return "object_undefined";
+    if(diag == "ServiceError_invalid_address")
+        return "invalid_address";
+    if(diag == "ServiceError_type_unsupported")
+        return "type_unsupported";
+    if(diag == "ServiceError_type_inconsistent")
+        return "type_inconsistent";
+    if(diag == "ServiceError_object_attribute_inconsistent")
+        return "object_attribute_inconsistent";
+    if(diag == "ServiceError_object_access_unsupported")
+        return "object_access_unsupported";
+    if(diag == "ServiceError_object_non_existent")
+        return "object_non_existent";
+    if(diag == "ServiceError_object_access_denied")
+        return "object_access_denied";
+    if(diag == "ServiceError_object_invalidated")
+        return "object_invalidated";
+
+    return "unknown_error";
+}
+
 event zeek_init() &priority=5
 {
     # Log::create_stream 注册一条日志流，三个参数含义如下：
@@ -40,7 +88,7 @@ event zeek_init() &priority=5
 # =====================================================================
 # 监听 events.zeek 的配对级事件 NameList（GetNameList 请求与响应按 invokeID 配对后）→ mms_name_list.log
 # =====================================================================
-event NameList(c: connection, direction: string, request: GetNameList_Request, response: GetNameList_Response) {
+event NameList(c: connection, direction: string, invokeID: int, request: GetNameList_Request, response: GetNameList_Response) {
     local scope: string = "";
     local value: string = "";
     local class: string = "";
@@ -71,11 +119,26 @@ event NameList(c: connection, direction: string, request: GetNameList_Request, r
     }
     value += "]";
 
+    local endpoint_fields = mms_endpoint_fields(c$id);
+    local result_fields = mms_result_fields();
+
     # 组装日志记录（成功）；可选字段仅在非空时写入
     local rec: NameListRecord = record(
         $ts=network_time(),
         $uid=c$uid,
         $id=c$id,
+        $src_ip=endpoint_fields$src_ip,
+        $dst_ip=endpoint_fields$dst_ip,
+        $src_port=endpoint_fields$src_port,
+        $dst_port=endpoint_fields$dst_port,
+        $direction=direction,
+        $invoke_id=invokeID,
+        $operation="get_name_list",
+        $object_path=name_list_object_path(scope, domain),
+        $result=result_fields$result,
+        $error_code=result_fields$error_code,
+        $parse_status=result_fields$parse_status,
+        $parse_error=result_fields$parse_error,
         $success=T
     );
 
@@ -100,10 +163,10 @@ event NameList(c: connection, direction: string, request: GetNameList_Request, r
 }
 
 # GetNameList 失败（confirmed 错误与缓存请求配对后触发）
-event NameListError (c: connection, direction: string, request: GetNameList_Request, response: Confirmed_ErrorPDU) {
-    local scope: string;
-    local class: string;
-    local domain: string;
+event NameListError (c: connection, direction: string, invokeID: int, request: GetNameList_Request, response: Confirmed_ErrorPDU) {
+    local scope: string = "";
+    local class: string = "";
+    local domain: string = "";
 
     if(!log_name_list) return;
 
@@ -120,13 +183,29 @@ event NameListError (c: connection, direction: string, request: GetNameList_Requ
         domain=request $ objectScope $ domainSpecific;
     }
 
+    local endpoint_fields = mms_endpoint_fields(c$id);
+    local diag = errorClass_to_string(response$serviceError);
+    local result_fields = mms_result_fields("failure", service_error_code(diag), diag);
+
     # 组装日志记录（失败），diag 为服务错误码
     local rec: NameListRecord = record(
         $ts=network_time(),
         $uid=c$uid,
         $id=c$id,
+        $src_ip=endpoint_fields$src_ip,
+        $dst_ip=endpoint_fields$dst_ip,
+        $src_port=endpoint_fields$src_port,
+        $dst_port=endpoint_fields$dst_port,
+        $direction=direction,
+        $invoke_id=invokeID,
+        $operation="get_name_list",
+        $object_path=name_list_object_path(scope, domain),
+        $result=result_fields$result,
+        $error_code=result_fields$error_code,
+        $parse_status=result_fields$parse_status,
+        $parse_error=result_fields$parse_error,
         $success=F,
-        $diag=errorClass_to_string(response$serviceError)
+        $diag=diag
     );
 
     # 可选字段仅在非空时写入

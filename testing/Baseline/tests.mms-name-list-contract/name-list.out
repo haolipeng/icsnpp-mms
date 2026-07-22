@@ -1,0 +1,2 @@
+192.168.1.10	192.168.1.20	12000	102	resp_to_orig	701	get_name_list	domain:LD0	success	none	-	ok	none	nammedVariable	domainSpecific	LD0	["LLN0","MX"]	T
+192.168.1.10	192.168.1.20	12000	102	resp_to_orig	702	get_name_list	vmd	failure	object_access_denied	ServiceError_object_access_denied	ok	none	ObjectClass_namedVariableList	vmdSpecific	-	-	F
