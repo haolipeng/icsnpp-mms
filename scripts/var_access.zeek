@@ -14,6 +14,8 @@ export {
         operation: string   &log;
         variable:  string   &log;
         object_path: string &log;
+        result:    string   &log;
+        error_code: string  &log;
         ld:        string   &log &optional;
         ln:        string   &log &optional;
         do:        string   &log &optional;
@@ -75,6 +77,35 @@ function add_varlist_object_path_fields(rec: VariableListAccess, listname: Objec
     return rec;
 }
 
+# 按 plugin/scripts/types.zeek 中的 DataAccessError 枚举映射为稳定 error_code。
+# 未覆盖的枚举统一归为 unknown_error。
+function data_access_error_code(error: DataAccessError): string {
+    if(error == DataAccessError_object_invalidated)
+        return "object_invalidated";
+    if(error == hardware_fault)
+        return "hardware_fault";
+    if(error == temporarily_unavailable)
+        return "temporarily_unavailable";
+    if(error == DataAccessError_object_access_denied)
+        return "object_access_denied";
+    if(error == DataAccessError_object_undefined)
+        return "object_undefined";
+    if(error == DataAccessError_invalid_address)
+        return "invalid_address";
+    if(error == DataAccessError_type_unsupported)
+        return "type_unsupported";
+    if(error == DataAccessError_type_inconsistent)
+        return "type_inconsistent";
+    if(error == DataAccessError_object_attribute_inconsistent)
+        return "object_attribute_inconsistent";
+    if(error == DataAccessError_object_access_unsupported)
+        return "object_access_unsupported";
+    if(error == DataAccessError_object_non_existent)
+        return "object_non_existent";
+
+    return "unknown_error";
+}
+
 event zeek_init() &priority=5
 {
     # Log::create_stream 注册一条日志流，三个参数含义如下：
@@ -101,6 +132,8 @@ event VariableReadRequest(c: connection, direction: string, invokeID: int, name:
         $operation="read_request",
         $variable=objectName_to_string(name),
         $object_path="",
+        $result="success",
+        $error_code="none",
         $success=T,
         $invoke_id=invokeID
     ];
@@ -120,6 +153,8 @@ event VariableReadResponse(c: connection, direction: string, invokeID: int, name
         $operation="read",
         $variable=objectName_to_string(name),
         $object_path="",
+        $result="success",
+        $error_code="none",
         $value=data_to_string(data),
         $success=T,
         $invoke_id=invokeID
@@ -140,6 +175,8 @@ event VariableWriteRequest(c: connection, direction: string, invokeID: int, name
         $operation="write_request",
         $variable=objectName_to_string(name),
         $object_path="",
+        $result="success",
+        $error_code="none",
         $value=data_to_string(data),
         $success=T,
         $invoke_id=invokeID
@@ -160,6 +197,8 @@ event VariableWriteResponse(c: connection, direction: string, invokeID: int, nam
         $operation="write",
         $variable=objectName_to_string(name),
         $object_path="",
+        $result="success",
+        $error_code="none",
         $value=data_to_string(data),
         $success=T,
         $invoke_id=invokeID
@@ -180,6 +219,8 @@ event VariableReadResponseError(c: connection, direction: string, invokeID: int,
         $operation="read",
         $variable=objectName_to_string(name),
         $object_path="",
+        $result="failure",
+        $error_code=data_access_error_code(error),
         $success=F,
         $diag=remove_ns(cat(error)),
         $invoke_id=invokeID
@@ -200,6 +241,8 @@ event VariableWriteResponseError(c: connection, direction: string, invokeID: int
         $operation="write",
         $variable=objectName_to_string(name),
         $object_path="",
+        $result="failure",
+        $error_code=data_access_error_code(error),
         $value=data_to_string(data),
         $success=F,
         $diag=remove_ns(cat(error)),
@@ -356,6 +399,8 @@ event VariableReport(c: connection, direction: string, name: ObjectName, data: D
         $operation="report",
         $variable=objectName_to_string(name),
         $object_path="",
+        $result="success",
+        $error_code="none",
         $value=data_to_string(data),
         $success=T
     ];
@@ -375,6 +420,8 @@ event VariableReportError(c: connection, direction: string, name: ObjectName, er
         $operation="report",
         $variable=objectName_to_string(name),
         $object_path="",
+        $result="failure",
+        $error_code=data_access_error_code(error),
         $success=F,
         $diag=remove_ns(cat(error))
     ];

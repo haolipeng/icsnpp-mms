@@ -1,0 +1,6 @@
+read	LD0::ST	success	none	T	-	401
+read	LD0::ST	failure	object_access_denied	F	DataAccessError_object_access_denied	402
+write	LD0::MX	success	none	T	-	403
+write	LD0::MX	failure	hardware_fault	F	hardware_fault	404
+report	ReportVar	success	none	T	-	-
+report	ReportVar	failure	unknown_error	F	object_value_invalid	-
