@@ -164,3 +164,58 @@ event RejectPDU_evt(c: connection, direction: string, pdu: RejectPDU) {
 
     Log::write(LOG_ERROR, rec);
 }
+
+event CancelErrorPDU_evt(c: connection, direction: string, pdu: Cancel_ErrorPDU) {
+    if(!log_error) return;
+
+    local endpoint_fields = mms_endpoint_fields(c$id);
+    local diag = errorClass_to_string(pdu$serviceError);
+    local result_fields = mms_result_fields("failure", mms_service_error_code(diag), diag);
+
+    local rec: ErrorRecord = [
+        $ts=network_time(),
+        $uid=c$uid,
+        $id=c$id,
+        $src_ip=endpoint_fields$src_ip,
+        $dst_ip=endpoint_fields$dst_ip,
+        $src_port=endpoint_fields$src_port,
+        $dst_port=endpoint_fields$dst_port,
+        $direction=direction,
+        $invoke_id=pdu$originalInvokeID,
+        $operation="cancel_error",
+        $result=result_fields$result,
+        $error_code=result_fields$error_code,
+        $parse_status=result_fields$parse_status,
+        $parse_error=result_fields$parse_error,
+        $diag=diag
+    ];
+
+    Log::write(LOG_ERROR, rec);
+}
+
+event ConcludeErrorPDU_evt(c: connection, direction: string, pdu: Conclude_ErrorPDU) {
+    if(!log_error) return;
+
+    local endpoint_fields = mms_endpoint_fields(c$id);
+    local diag = errorClass_to_string(pdu);
+    local result_fields = mms_result_fields("failure", mms_service_error_code(diag), diag);
+
+    local rec: ErrorRecord = [
+        $ts=network_time(),
+        $uid=c$uid,
+        $id=c$id,
+        $src_ip=endpoint_fields$src_ip,
+        $dst_ip=endpoint_fields$dst_ip,
+        $src_port=endpoint_fields$src_port,
+        $dst_port=endpoint_fields$dst_port,
+        $direction=direction,
+        $operation="conclude_error",
+        $result=result_fields$result,
+        $error_code=result_fields$error_code,
+        $parse_status=result_fields$parse_status,
+        $parse_error=result_fields$parse_error,
+        $diag=diag
+    ];
+
+    Log::write(LOG_ERROR, rec);
+}
