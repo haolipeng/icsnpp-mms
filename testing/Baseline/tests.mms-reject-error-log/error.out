@@ -1,0 +1,1 @@
+192.168.1.10	192.168.1.20	12000	102	resp_to_orig	1902	reject	failure	invalid_invoke_id	RejectPDU_rejectReason_confirmed_errorPDU_invalid_invokeID	ok	none

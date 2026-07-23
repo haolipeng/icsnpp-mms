@@ -42,6 +42,7 @@ export {
     global informationReport_evt: event(c: connection, direction: string, pdu: InformationReport);
     global confirmedErrorPDU_evt: event(c: connection, direction: string, invokeID: int, pdu: Confirmed_ErrorPDU);
     global UnmatchedConfirmedError: event(c: connection, direction: string, invokeID: int, pdu: Confirmed_ErrorPDU);
+    global RejectPDU_evt: event(c: connection, direction: string, pdu: RejectPDU);
 
     # =====================================================================
     # 见到 identify 响应时触发下列事件
@@ -213,6 +214,13 @@ event mms::mms_pdu(c: connection, is_orig: bool, pdu: MMSpdu) {
             direction,
             pdu $ confirmed_ErrorPDU $ invokeID,
             pdu $ confirmed_ErrorPDU
+        );
+    # Reject PDU：没有 invokeID cache 可配对，直接输出到通用错误日志
+    } else if(pdu ?$ rejectPDU) {
+        event RejectPDU_evt(
+            c,
+            direction,
+            pdu $ rejectPDU
         );
     # Unconfirmed PDU 中的 informationReport（无 invokeID；其他 unconfirmed 服务未实现）
     # informationReport inside unconfirmed_PDU (no invokeID; other unconfirmed services not handled)
