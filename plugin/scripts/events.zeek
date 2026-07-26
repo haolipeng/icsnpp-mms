@@ -17,6 +17,8 @@ redef record connection += {
     mms_name_list_requests: table[int] of GetNameList_Request &default=table();
     mms_get_variable_access_attributes_request: table[int] of GetVariableAccessAttributes_Request &default=table();
     mms_get_named_variable_list_attributes_request: table[int] of GetNamedVariableListAttributes_Request &default=table();
+    mms_file_open_requests: table[int] of FileOpen_Request &optional;
+    mms_file_handles: table[int] of string &optional;
 };
 
 export {
@@ -34,11 +36,13 @@ export {
     global getNameListRequest: event(c: connection, direction: string, invokeID: int, pdu: GetNameList_Request);
     global getVariableAccessAttributesRequest: event(c: connection, direction: string, invokeID: int, pdu: GetVariableAccessAttributes_Request);
     global getNamedVariableListAttributesRequest: event(c: connection, direction: string, invokeID: int, pdu: GetNamedVariableListAttributes_Request);
+    global fileOpenRequest: event(c: connection, direction: string, invokeID: int, pdu: FileOpen_Request);
     global readResponse: event(c: connection, direction: string, invokeID: int, pdu: Read_Response);
     global writeResponse: event(c: connection, direction: string, invokeID: int, pdu: Write_Response);
     global getNameListResponse: event(c: connection, direction: string, invokeID: int, pdu: GetNameList_Response);
     global getVariableAccessAttributesResponse: event(c: connection, direction: string, invokeID: int, pdu: GetVariableAccessAttributes_Response);
     global getNamedVariableListAttributesResponse: event(c: connection, direction: string, invokeID: int, pdu: GetNamedVariableListAttributes_Response);
+    global fileOpenResponse: event(c: connection, direction: string, invokeID: int, pdu: FileOpen_Response);
     global informationReport_evt: event(c: connection, direction: string, pdu: InformationReport);
     global confirmedErrorPDU_evt: event(c: connection, direction: string, invokeID: int, pdu: Confirmed_ErrorPDU);
     global UnmatchedConfirmedError: event(c: connection, direction: string, invokeID: int, pdu: Confirmed_ErrorPDU);
@@ -160,6 +164,13 @@ event mms::mms_pdu(c: connection, is_orig: bool, pdu: MMSpdu) {
                 pdu $ confirmed_RequestPDU $ invokeID,
                 pdu $ confirmed_RequestPDU $ confirmedServiceRequest $ getNamedVariableListAttributes
             );
+        } else if(pdu $ confirmed_RequestPDU $ confirmedServiceRequest ?$ fileOpen) {
+            event fileOpenRequest(
+                c,
+                direction,
+                pdu $ confirmed_RequestPDU $ invokeID,
+                pdu $ confirmed_RequestPDU $ confirmedServiceRequest $ fileOpen
+            );
         }
     # Confirmed 响应：按服务类型分发；多数服务凭 invokeID 与请求配对（identify 除外）
     # Confirmed response: dispatch by service type; invokeID pairs with request for most
@@ -205,6 +216,13 @@ event mms::mms_pdu(c: connection, is_orig: bool, pdu: MMSpdu) {
                 c,
                 direction,
                 pdu $ confirmed_ResponsePDU $ confirmedServiceResponse $ identify
+            );
+        } else if(pdu $ confirmed_ResponsePDU $ confirmedServiceResponse ?$ fileOpen) {
+            event fileOpenResponse(
+                c,
+                direction,
+                pdu $ confirmed_ResponsePDU $ invokeID,
+                pdu $ confirmed_ResponsePDU $ confirmedServiceResponse $ fileOpen
             );
         }
 
@@ -437,6 +455,13 @@ event getNamedVariableListAttributesRequest(c: connection, direction: string, in
 event getNamedVariableListAttributesResponse(c: connection, direction: string, invokeID: int, pdu: GetNamedVariableListAttributes_Response) {
     if(invokeID in c $ mms_get_named_variable_list_attributes_request)
         event NamedVariableListAttributes(c, direction, invokeID, c $ mms_get_named_variable_list_attributes_request[invokeID], pdu);
+}
+
+event fileOpenRequest(c: connection, direction: string, invokeID: int, pdu: FileOpen_Request) {
+    if(! c?$mms_file_open_requests)
+        c$mms_file_open_requests = table();
+
+    c$mms_file_open_requests[invokeID] = pdu;
 }
 
 # =====================================================================
