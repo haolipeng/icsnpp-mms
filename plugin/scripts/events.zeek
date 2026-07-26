@@ -42,6 +42,7 @@ export {
     global fileCloseRequest: event(c: connection, direction: string, invokeID: int, pdu: FileClose_Request);
     global fileDeleteRequest: event(c: connection, direction: string, invokeID: int, pdu: FileDelete_Request);
     global fileDirectoryRequest: event(c: connection, direction: string, invokeID: int, pdu: FileDirectory_Request);
+    global obtainFileRequest: event(c: connection, direction: string, invokeID: int, pdu: ObtainFile_Request);
     global readResponse: event(c: connection, direction: string, invokeID: int, pdu: Read_Response);
     global writeResponse: event(c: connection, direction: string, invokeID: int, pdu: Write_Response);
     global getNameListResponse: event(c: connection, direction: string, invokeID: int, pdu: GetNameList_Response);
@@ -169,6 +170,13 @@ event mms::mms_pdu(c: connection, is_orig: bool, pdu: MMSpdu) {
                 direction,
                 pdu $ confirmed_RequestPDU $ invokeID,
                 pdu $ confirmed_RequestPDU $ confirmedServiceRequest $ getNamedVariableListAttributes
+            );
+        } else if(pdu $ confirmed_RequestPDU $ confirmedServiceRequest ?$ obtainFile) {
+            event obtainFileRequest(
+                c,
+                direction,
+                pdu $ confirmed_RequestPDU $ invokeID,
+                pdu $ confirmed_RequestPDU $ confirmedServiceRequest $ obtainFile
             );
         } else if(pdu $ confirmed_RequestPDU $ confirmedServiceRequest ?$ fileOpen) {
             event fileOpenRequest(

@@ -18,6 +18,8 @@ export {
         invoke_id: int      &log;
         operation: string   &log;
         file_path: string   &log;
+        source_file_path: string &log &optional;
+        destination_file_path: string &log &optional;
         file_handle: int    &log &optional;
         result:    string   &log;
         error_code: string  &log;
@@ -85,6 +87,47 @@ function write_file_service(
     Log::write(LOG_FILE_SERVICE, rec);
 }
 
+function visible_request_result(): MMS_ResultFields {
+    return mms_result_fields(
+        "unknown",
+        "none",
+        "",
+        "partial",
+        "request_response_unmatched"
+    );
+}
+
+function write_obtain_file_service(c: connection, direction: string, invokeID: int, pdu: ObtainFile_Request) {
+    local source_file_path = fileName_to_string(pdu$sourceFile);
+    local destination_file_path = fileName_to_string(pdu$destinationFile);
+    local file_path = source_file_path + " -> " + destination_file_path;
+    local result_fields = visible_request_result();
+    local endpoint_fields = mms_endpoint_fields(c$id);
+    local rec: FileService = [
+        $ts=network_time(),
+        $uid=c$uid,
+        $id=c$id,
+        $src_ip=endpoint_fields$src_ip,
+        $dst_ip=endpoint_fields$dst_ip,
+        $src_port=endpoint_fields$src_port,
+        $dst_port=endpoint_fields$dst_port,
+        $direction=direction,
+        $invoke_id=invokeID,
+        $operation="obtain_file",
+        $file_path=file_path,
+        $source_file_path=source_file_path,
+        $destination_file_path=destination_file_path,
+        $result=result_fields$result,
+        $error_code=result_fields$error_code,
+        $parse_status=result_fields$parse_status,
+        $parse_error=result_fields$parse_error,
+        $is_high_risk_operation=mms_is_high_risk_operation("obtain_file"),
+        $success=F
+    ];
+
+    Log::write(LOG_FILE_SERVICE, rec);
+}
+
 function file_handle_result(c: connection, file_handle: int): MMS_ResultFields {
     if(c?$mms_file_handles && file_handle in c$mms_file_handles)
         return mms_result_fields();
@@ -103,16 +146,6 @@ function file_handle_path(c: connection, file_handle: int): string {
         return c$mms_file_handles[file_handle];
 
     return "";
-}
-
-function visible_request_result(): MMS_ResultFields {
-    return mms_result_fields(
-        "unknown",
-        "none",
-        "",
-        "partial",
-        "request_response_unmatched"
-    );
 }
 
 function directory_request_path(pdu: FileDirectory_Request): string {
@@ -208,6 +241,13 @@ event fileDirectoryRequest(c: connection, direction: string, invokeID: int, pdu:
         directory_request_path(pdu),
         visible_request_result()
     );
+}
+
+event obtainFileRequest(c: connection, direction: string, invokeID: int, pdu: ObtainFile_Request) {
+    if(! log_file_service)
+        return;
+
+    write_obtain_file_service(c, direction, invokeID, pdu);
 }
 
 event connection_state_remove(c: connection) {
