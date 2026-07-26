@@ -37,11 +37,27 @@ function weird_parse_error(name: string): string {
     return "unknown_parse_error";
 }
 
-function is_mms_parse_weird(w: Weird::Info): bool {
+function is_mms_analyzer_parse_weird(w: Weird::Info): bool {
     if(w$name == "mms_parse_error" || w$name == "mms_constraint_error")
         return T;
 
     if(w?$source && w$source == "MMS" && /parse_error|constraint_error/ in w$name)
+        return T;
+
+    return F;
+}
+
+function is_mms_parse_weird(w: Weird::Info): bool {
+    if(is_mms_analyzer_parse_weird(w))
+        return T;
+
+    if(w$name == "pres_parse_error" || w$name == "iso_stack_incomplete")
+        return T;
+
+    if(w?$source && w$source == "PRES" && /parse_error/ in w$name)
+        return T;
+
+    if(w?$source && w$source == "ISO")
         return T;
 
     return F;
@@ -73,7 +89,7 @@ hook Weird::log_policy(w: Weird::Info, id: Log::ID, filter: Log::Filter)
         parse_error
     );
 
-    if(w?$uid && w$uid in parse_status_business_contexts) {
+    if(is_mms_analyzer_parse_weird(w) && w?$uid && w$uid in parse_status_business_contexts) {
         local c = parse_status_business_contexts[w$uid];
         if(! c?$mms_info)
             return;
