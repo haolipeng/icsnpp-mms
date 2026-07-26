@@ -68,7 +68,6 @@ function write_file_service(
         $invoke_id=invokeID,
         $operation=operation,
         $file_path=file_path,
-        $file_handle=file_handle,
         $result=result_fields$result,
         $error_code=result_fields$error_code,
         $parse_status=result_fields$parse_status,
@@ -79,6 +78,9 @@ function write_file_service(
 
     if(result_fields?$diag)
         rec$diag = result_fields$diag;
+
+    if(file_handle >= 0)
+        rec$file_handle = file_handle;
 
     Log::write(LOG_FILE_SERVICE, rec);
 }
@@ -99,6 +101,26 @@ function file_handle_result(c: connection, file_handle: int): MMS_ResultFields {
 function file_handle_path(c: connection, file_handle: int): string {
     if(c?$mms_file_handles && file_handle in c$mms_file_handles)
         return c$mms_file_handles[file_handle];
+
+    return "";
+}
+
+function visible_request_result(): MMS_ResultFields {
+    return mms_result_fields(
+        "unknown",
+        "none",
+        "",
+        "partial",
+        "request_response_unmatched"
+    );
+}
+
+function directory_request_path(pdu: FileDirectory_Request): string {
+    if(pdu?$fileSpecification)
+        return fileName_to_string(pdu$fileSpecification);
+
+    if(pdu?$continueAfter)
+        return fileName_to_string(pdu$continueAfter);
 
     return "";
 }
@@ -156,6 +178,36 @@ event fileCloseResponse(c: connection, direction: string, invokeID: int, pdu: Fi
 
     if(c?$mms_file_handles && file_handle in c$mms_file_handles)
         delete c$mms_file_handles[file_handle];
+}
+
+event fileDeleteRequest(c: connection, direction: string, invokeID: int, pdu: FileDelete_Request) {
+    if(! log_file_service)
+        return;
+
+    write_file_service(
+        c,
+        direction,
+        invokeID,
+        "file_delete",
+        -1,
+        fileName_to_string(pdu),
+        visible_request_result()
+    );
+}
+
+event fileDirectoryRequest(c: connection, direction: string, invokeID: int, pdu: FileDirectory_Request) {
+    if(! log_file_service)
+        return;
+
+    write_file_service(
+        c,
+        direction,
+        invokeID,
+        "file_directory",
+        -1,
+        directory_request_path(pdu),
+        visible_request_result()
+    );
 }
 
 event connection_state_remove(c: connection) {

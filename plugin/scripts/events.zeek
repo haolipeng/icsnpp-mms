@@ -40,6 +40,8 @@ export {
     global fileOpenRequest: event(c: connection, direction: string, invokeID: int, pdu: FileOpen_Request);
     global fileReadRequest: event(c: connection, direction: string, invokeID: int, pdu: FileRead_Request);
     global fileCloseRequest: event(c: connection, direction: string, invokeID: int, pdu: FileClose_Request);
+    global fileDeleteRequest: event(c: connection, direction: string, invokeID: int, pdu: FileDelete_Request);
+    global fileDirectoryRequest: event(c: connection, direction: string, invokeID: int, pdu: FileDirectory_Request);
     global readResponse: event(c: connection, direction: string, invokeID: int, pdu: Read_Response);
     global writeResponse: event(c: connection, direction: string, invokeID: int, pdu: Write_Response);
     global getNameListResponse: event(c: connection, direction: string, invokeID: int, pdu: GetNameList_Response);
@@ -188,6 +190,20 @@ event mms::mms_pdu(c: connection, is_orig: bool, pdu: MMSpdu) {
                 direction,
                 pdu $ confirmed_RequestPDU $ invokeID,
                 pdu $ confirmed_RequestPDU $ confirmedServiceRequest $ fileClose
+            );
+        } else if(pdu $ confirmed_RequestPDU $ confirmedServiceRequest ?$ fileDelete) {
+            event fileDeleteRequest(
+                c,
+                direction,
+                pdu $ confirmed_RequestPDU $ invokeID,
+                pdu $ confirmed_RequestPDU $ confirmedServiceRequest $ fileDelete
+            );
+        } else if(pdu $ confirmed_RequestPDU $ confirmedServiceRequest ?$ fileDirectory) {
+            event fileDirectoryRequest(
+                c,
+                direction,
+                pdu $ confirmed_RequestPDU $ invokeID,
+                pdu $ confirmed_RequestPDU $ confirmedServiceRequest $ fileDirectory
             );
         }
     # Confirmed 响应：按服务类型分发；多数服务凭 invokeID 与请求配对（identify 除外）
