@@ -46,6 +46,63 @@ function fileName_to_string(name: FileName): string {
     return path;
 }
 
+function write_file_service(
+    c: connection,
+    direction: string,
+    invokeID: int,
+    operation: string,
+    file_handle: int,
+    file_path: string,
+    result_fields: MMS_ResultFields
+) {
+    local endpoint_fields = mms_endpoint_fields(c$id);
+    local rec: FileService = [
+        $ts=network_time(),
+        $uid=c$uid,
+        $id=c$id,
+        $src_ip=endpoint_fields$src_ip,
+        $dst_ip=endpoint_fields$dst_ip,
+        $src_port=endpoint_fields$src_port,
+        $dst_port=endpoint_fields$dst_port,
+        $direction=direction,
+        $invoke_id=invokeID,
+        $operation=operation,
+        $file_path=file_path,
+        $file_handle=file_handle,
+        $result=result_fields$result,
+        $error_code=result_fields$error_code,
+        $parse_status=result_fields$parse_status,
+        $parse_error=result_fields$parse_error,
+        $is_high_risk_operation=mms_is_high_risk_operation(operation),
+        $success=result_fields$result == "success"
+    ];
+
+    if(result_fields?$diag)
+        rec$diag = result_fields$diag;
+
+    Log::write(LOG_FILE_SERVICE, rec);
+}
+
+function file_handle_result(c: connection, file_handle: int): MMS_ResultFields {
+    if(c?$mms_file_handles && file_handle in c$mms_file_handles)
+        return mms_result_fields();
+
+    return mms_result_fields(
+        "success",
+        "none",
+        "",
+        "partial",
+        "file_handle_unmatched"
+    );
+}
+
+function file_handle_path(c: connection, file_handle: int): string {
+    if(c?$mms_file_handles && file_handle in c$mms_file_handles)
+        return c$mms_file_handles[file_handle];
+
+    return "";
+}
+
 event zeek_init() &priority=5
 {
     Log::create_stream(mms::LOG_FILE_SERVICE,
@@ -69,35 +126,44 @@ event fileOpenResponse(c: connection, direction: string, invokeID: int, pdu: Fil
     local file_handle = pdu$frsmID;
     c$mms_file_handles[file_handle] = file_path;
 
-    local endpoint_fields = mms_endpoint_fields(c$id);
     local result_fields = mms_result_fields();
-    local rec: FileService = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
-        $src_ip=endpoint_fields$src_ip,
-        $dst_ip=endpoint_fields$dst_ip,
-        $src_port=endpoint_fields$src_port,
-        $dst_port=endpoint_fields$dst_port,
-        $direction=direction,
-        $invoke_id=invokeID,
-        $operation="file_open",
-        $file_path=file_path,
-        $file_handle=file_handle,
-        $result=result_fields$result,
-        $error_code=result_fields$error_code,
-        $parse_status=result_fields$parse_status,
-        $parse_error=result_fields$parse_error,
-        $is_high_risk_operation=mms_is_high_risk_operation("file_open"),
-        $success=T
-    ];
+    write_file_service(c, direction, invokeID, "file_open", file_handle, file_path, result_fields);
+}
 
-    Log::write(LOG_FILE_SERVICE, rec);
+event fileReadRequest(c: connection, direction: string, invokeID: int, pdu: FileRead_Request) {
+    if(! log_file_service)
+        return;
+
+    local file_handle = pdu;
+    local file_path = file_handle_path(c, file_handle);
+    local result_fields = file_handle_result(c, file_handle);
+
+    write_file_service(c, direction, invokeID, "file_read", file_handle, file_path, result_fields);
+}
+
+event fileCloseResponse(c: connection, direction: string, invokeID: int, pdu: FileClose_Response) {
+    if(! log_file_service)
+        return;
+
+    if(! c?$mms_file_close_requests || invokeID !in c$mms_file_close_requests)
+        return;
+
+    local file_handle = c$mms_file_close_requests[invokeID];
+    local file_path = file_handle_path(c, file_handle);
+    local result_fields = file_handle_result(c, file_handle);
+
+    write_file_service(c, direction, invokeID, "file_close", file_handle, file_path, result_fields);
+
+    if(c?$mms_file_handles && file_handle in c$mms_file_handles)
+        delete c$mms_file_handles[file_handle];
 }
 
 event connection_state_remove(c: connection) {
     if(c?$mms_file_open_requests)
         delete c$mms_file_open_requests;
+
+    if(c?$mms_file_close_requests)
+        delete c$mms_file_close_requests;
 
     if(c?$mms_file_handles)
         delete c$mms_file_handles;
