@@ -6,7 +6,7 @@
 
 > 包裹已经送到了（`mms_pdu`），脚本层接下来具体做什么？
 
-## 1. 三份脚本，各干一件事
+## 1. 几份脚本，各干一件事
 
 整个插件做三件事：
 
@@ -16,38 +16,46 @@
 
 前两篇讲完了前两步；**本篇只讲最后一步**。
 
-涉及三个主要脚本，分工很简单：
+涉及几类主要脚本，分工很简单：
 
 ```text
-events.zeek     拆包裹：一个大 PDU 越拆越细
-main.zeek       记总账：一条连接最后写一条 mms.log
-var_access.zeek 等  记明细：读写变量等单独写专项日志
+events.zeek         分拣包裹：判断 PDU 类型，触发服务级入口事件
+pairing_state.zeek  放储物柜：声明按 invokeID 配对需要的连接状态
+pairing.zeek        对取件号：缓存请求、配对响应、路由 confirmed error
+main.zeek           记总账：一条连接最后写一条 mms.log
+var_access.zeek 等      记明细：读写变量等单独写专项日志
 ```
 
 打个比方：
 
 ```text
-C++ 层     把二进制变成「结构化包裹」，喊一声 mms_pdu
-events.zeek  打开包裹，按类型分拣（读请求、写响应、设备上报……）
-main.zeek    把设备名、协议版本等信息记在同一张「连接档案」上，连接结束归档
+C++ 层          把二进制变成「结构化包裹」，喊一声 mms_pdu
+events.zeek     打开包裹，按类型分拣（读请求、写响应、设备上报……）
+pairing.zeek    遇到有取件号的请求/响应时，把上下文配齐
+main.zeek       把设备名、协议版本等信息记在同一张「连接档案」上，连接结束归档
 ```
 
-## 2. `events.zeek`：一个文件，四道工序
+## 2. `events.zeek` 与 `pairing.zeek`：分拣和配对分开
 
-`plugin/scripts/events.zeek` **自己不写日志**，只负责拆事件。文件从上到下，像流水线四道工序：
+`plugin/scripts/events.zeek` **自己不写日志**，主要负责把 `mms_pdu` 按类型分发到服务级入口事件。需要 `invokeID` 请求/响应配对的逻辑，集中放在 `pairing_state.zeek` 和 `pairing.zeek`：
 
 ```mermaid
 flowchart TB
-    subgraph events_zeek ["events.zeek 流水线"]
-        A["① 准备储物柜<br/>在 connection 上挂 5 张表"]
-        B["② 声明事件名<br/>告诉 Zeek 有哪些事件可以触发"]
-        C["③ 总入口 mms_pdu<br/>看包裹类型，分到不同窗口"]
-        D["④ 各窗口再细分<br/>一个读请求可能拆成多个变量事件"]
-        A --> B --> C --> D
+    subgraph dispatch ["events.zeek：分拣"]
+        A["声明服务级/变量级事件"]
+        B["mms_pdu 入口"]
+        C["按 PDU 类型触发 readRequest/writeResponse 等"]
+        A --> B --> C
     end
+    subgraph pairing ["pairing module：配对"]
+        S["pairing_state.zeek<br/>声明 connection 储物柜"]
+        P["pairing.zeek<br/>缓存请求、配对响应、路由错误"]
+        S --> P
+    end
+    C --> P
 ```
 
-① 里的「储物柜」是什么？后面第 4 节会讲——用来**暂存请求，等响应来了再配对**。
+这里的「储物柜」是什么？后面第 4 节会讲——用来**暂存请求，等响应来了再配对**。
 
 拆出来的事件，粒度分三档，越来越细：
 
@@ -97,7 +105,7 @@ $    「取出这个字段」—— 再往里看具体内容
 服务端返回读响应，取件号也是 42  →  一对
 ```
 
-但有时响应里信息不全（比如读响应里可能不带「读了哪些变量」），所以脚本在收到**请求**时，先把整份请求存进 connection 上的表；**响应**到了，再按取件号把请求翻出来对照。
+但有时响应里信息不全（比如读响应里可能不带「读了哪些变量」），所以 `pairing.zeek` 在收到**请求**时，先把整份请求存进 connection 上的表；**响应**到了，再按取件号把请求翻出来对照。
 
 具体会在这些场景里用到：
 
@@ -120,15 +128,20 @@ sequenceDiagram
     响应事件->>响应事件: 凑齐变量名/写入值/查询上下文
 ```
 
-五张表各存一种请求，key 都是 `invokeID`：
+这些表各存一种请求，key 都是 `invokeID`，由 `pairing_state.zeek` 声明、由 `pairing.zeek` 使用：
 
 | 场景 | 表 | 是否缓存整份请求 | 触发条件 |
 | --- | --- | --- | --- |
 | Read | `mms_read_requests` | 是 | 仅当 `specificationWithResult=false` |
+| Read confirmed error | `mms_read_confirmed_error_requests` | 是 | 每个 `Read_Request` 都缓存 |
 | Write | `mms_write_requests` | 是 | 每个 `Write_Request` 都缓存 |
 | GetNameList | `mms_name_list_requests` | 是 | 每个 `GetNameList_Request` 都缓存 |
 | GetVariableAccessAttributes | `mms_get_variable_access_attributes_request` | 是 | 每个请求都缓存 |
 | GetNamedVariableListAttributes | `mms_get_named_variable_list_attributes_request` | 是 | 每个请求都缓存 |
+| FileOpen | `mms_file_open_requests` | 是 | 每个 `FileOpen_Request` 都缓存 |
+| FileClose | `mms_file_close_requests` | 是 | 每个 `FileClose_Request` 都缓存 |
+
+`mms_file_handles` 不是 invokeID 配对表，而是文件服务的业务状态：FileOpen 建立文件句柄到文件路径的关联，FileRead/FileClose 再用句柄回填路径。
 
 ## 5. 再拆一层：从一个读请求到「读了哪个变量」
 
@@ -182,7 +195,7 @@ flowchart TB
 
 ## 6. `main.zeek`：连接结束，写一条总日志
 
-`events.zeek` 负责拆；`main.zeek` 负责**记连接级别的摘要**，输出到 `mms.log`。
+`events.zeek` 负责分发；`pairing.zeek` 负责配对；`main.zeek` 负责**记连接级别的摘要**，输出到 `mms.log`。
 
 不是来一个 PDU 写一行日志，而是：
 
@@ -208,15 +221,15 @@ var_attributes.zeek     GetVariableAccessAttributes
 varlist_attributes.zeek GetNamedVariableListAttributes
 ```
 
-`mms.log` 是**连接摘要**；这些是**操作明细**。先掌握 `events.zeek` + `main.zeek` 即可。
+`mms.log` 是**连接摘要**；这些是**操作明细**。先掌握 `events.zeek` + `pairing.zeek` + `main.zeek` 即可。
 
 ## 8. 小结
 
 用一句话串起来：
 
 ```text
-mms_pdu 到货 → events.zeek 越拆越细 → main.zeek 记连接摘要 → mms.log
-         ↘ var_access.zeek 等记操作明细
+mms_pdu 到货 → events.zeek 分发 → pairing.zeek 配对 → var_access.zeek 等记操作明细
+                            ↘ main.zeek 记连接摘要 → mms.log
 ```
 
 三篇文档的关系：
