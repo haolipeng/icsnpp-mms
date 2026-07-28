@@ -1,5 +1,6 @@
 module mms;
 
+@load ./log_builder
 @load ./helper
 
 export {
@@ -57,29 +58,29 @@ function write_file_service(
     file_path: string,
     result_fields: MMS_ResultFields
 ) {
-    local endpoint_fields = mms_endpoint_fields(c$id);
+    local common_fields = mms_log_common_fields(c, direction, invokeID, result_fields);
     local rec: FileService = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
-        $src_ip=endpoint_fields$src_ip,
-        $dst_ip=endpoint_fields$dst_ip,
-        $src_port=endpoint_fields$src_port,
-        $dst_port=endpoint_fields$dst_port,
-        $direction=direction,
-        $invoke_id=invokeID,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
+        $src_ip=common_fields$src_ip,
+        $dst_ip=common_fields$dst_ip,
+        $src_port=common_fields$src_port,
+        $dst_port=common_fields$dst_port,
+        $direction=common_fields$direction,
+        $invoke_id=common_fields$invoke_id,
         $operation=operation,
         $file_path=file_path,
-        $result=result_fields$result,
-        $error_code=result_fields$error_code,
-        $parse_status=result_fields$parse_status,
-        $parse_error=result_fields$parse_error,
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
+        $parse_status=common_fields$parse_status,
+        $parse_error=common_fields$parse_error,
         $is_high_risk_operation=mms_is_high_risk_operation(operation),
-        $success=result_fields$result == "success"
+        $success=common_fields$success
     ];
 
-    if(result_fields?$diag)
-        rec$diag = result_fields$diag;
+    if(common_fields?$diag)
+        rec$diag = common_fields$diag;
 
     if(file_handle >= 0)
         rec$file_handle = file_handle;
@@ -102,27 +103,27 @@ function write_obtain_file_service(c: connection, direction: string, invokeID: i
     local destination_file_path = fileName_to_string(pdu$destinationFile);
     local file_path = source_file_path + " -> " + destination_file_path;
     local result_fields = visible_request_result();
-    local endpoint_fields = mms_endpoint_fields(c$id);
+    local common_fields = mms_log_common_fields(c, direction, invokeID, result_fields);
     local rec: FileService = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
-        $src_ip=endpoint_fields$src_ip,
-        $dst_ip=endpoint_fields$dst_ip,
-        $src_port=endpoint_fields$src_port,
-        $dst_port=endpoint_fields$dst_port,
-        $direction=direction,
-        $invoke_id=invokeID,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
+        $src_ip=common_fields$src_ip,
+        $dst_ip=common_fields$dst_ip,
+        $src_port=common_fields$src_port,
+        $dst_port=common_fields$dst_port,
+        $direction=common_fields$direction,
+        $invoke_id=common_fields$invoke_id,
         $operation="obtain_file",
         $file_path=file_path,
         $source_file_path=source_file_path,
         $destination_file_path=destination_file_path,
-        $result=result_fields$result,
-        $error_code=result_fields$error_code,
-        $parse_status=result_fields$parse_status,
-        $parse_error=result_fields$parse_error,
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
+        $parse_status=common_fields$parse_status,
+        $parse_error=common_fields$parse_error,
         $is_high_risk_operation=mms_is_high_risk_operation("obtain_file"),
-        $success=F
+        $success=common_fields$success
     ];
 
     Log::write(LOG_FILE_SERVICE, rec);

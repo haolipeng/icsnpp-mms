@@ -1,4 +1,5 @@
 @load ./main
+@load ./log_builder
 @load ./name_list
 @load ./var_access
 @load ./var_attributes

@@ -1,5 +1,6 @@
 module mms;
 
+@load ./log_builder
 @load ./helper
 
 export {
@@ -129,18 +130,19 @@ event VariableReadRequest(c: connection, direction: string, invokeID: int, name:
 
     if(!log_var_access) return;
 
+    local common_fields = mms_log_common_fields(c, direction, invokeID, mms_result_fields());
     local rec: VariableAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="read_request",
         $variable=objectName_to_string(name),
         $object_path="",
-        $result="success",
-        $error_code="none",
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("read_request"),
-        $success=T,
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_object_path_fields(rec, name);
 
@@ -151,19 +153,20 @@ event VariableReadResponse(c: connection, direction: string, invokeID: int, name
 
     if(!log_var_access) return;
 
+    local common_fields = mms_log_common_fields(c, direction, invokeID, mms_result_fields());
     local rec: VariableAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="read",
         $variable=objectName_to_string(name),
         $object_path="",
-        $result="success",
-        $error_code="none",
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("read"),
         $value=data_to_string(data),
-        $success=T,
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_object_path_fields(rec, name);
 
@@ -174,19 +177,20 @@ event VariableWriteRequest(c: connection, direction: string, invokeID: int, name
 
     if(!log_var_access) return;
 
+    local common_fields = mms_log_common_fields(c, direction, invokeID, mms_result_fields());
     local rec: VariableAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="write_request",
         $variable=objectName_to_string(name),
         $object_path="",
-        $result="success",
-        $error_code="none",
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("write_request"),
         $value=data_to_string(data),
-        $success=T,
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_object_path_fields(rec, name);
 
@@ -197,19 +201,20 @@ event VariableWriteResponse(c: connection, direction: string, invokeID: int, nam
 
     if(!log_var_access) return;
 
+    local common_fields = mms_log_common_fields(c, direction, invokeID, mms_result_fields());
     local rec: VariableAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="write",
         $variable=objectName_to_string(name),
         $object_path="",
-        $result="success",
-        $error_code="none",
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("write"),
         $value=data_to_string(data),
-        $success=T,
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_object_path_fields(rec, name);
 
@@ -220,19 +225,26 @@ event VariableReadResponseError(c: connection, direction: string, invokeID: int,
 
     if(!log_var_access) return;
 
+    local diag = remove_ns(cat(error));
+    local common_fields = mms_log_common_fields(
+        c,
+        direction,
+        invokeID,
+        mms_result_fields("failure", data_access_error_code(error), diag)
+    );
     local rec: VariableAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="read",
         $variable=objectName_to_string(name),
         $object_path="",
-        $result="failure",
-        $error_code=data_access_error_code(error),
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("read"),
-        $success=F,
-        $diag=remove_ns(cat(error)),
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $diag=common_fields$diag,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_object_path_fields(rec, name);
 
@@ -244,19 +256,25 @@ event VariableReadConfirmedError(c: connection, direction: string, invokeID: int
     if(!log_var_access) return;
 
     local diag = errorClass_to_string(response$serviceError);
+    local common_fields = mms_log_common_fields(
+        c,
+        direction,
+        invokeID,
+        mms_result_fields("failure", mms_service_error_code(diag), diag)
+    );
     local rec: VariableAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="read",
         $variable=objectName_to_string(name),
         $object_path="",
-        $result="failure",
-        $error_code=mms_service_error_code(diag),
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("read"),
-        $success=F,
-        $diag=diag,
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $diag=common_fields$diag,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_object_path_fields(rec, name);
 
@@ -267,20 +285,27 @@ event VariableWriteResponseError(c: connection, direction: string, invokeID: int
 
     if(!log_var_access) return;
 
+    local diag = remove_ns(cat(error));
+    local common_fields = mms_log_common_fields(
+        c,
+        direction,
+        invokeID,
+        mms_result_fields("failure", data_access_error_code(error), diag)
+    );
     local rec: VariableAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="write",
         $variable=objectName_to_string(name),
         $object_path="",
-        $result="failure",
-        $error_code=data_access_error_code(error),
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("write"),
         $value=data_to_string(data),
-        $success=F,
-        $diag=remove_ns(cat(error)),
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $diag=common_fields$diag,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_object_path_fields(rec, name);
 
@@ -292,20 +317,26 @@ event VariableWriteConfirmedError(c: connection, direction: string, invokeID: in
     if(!log_var_access) return;
 
     local diag = errorClass_to_string(response$serviceError);
+    local common_fields = mms_log_common_fields(
+        c,
+        direction,
+        invokeID,
+        mms_result_fields("failure", mms_service_error_code(diag), diag)
+    );
     local rec: VariableAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="write",
         $variable=objectName_to_string(name),
         $object_path="",
-        $result="failure",
-        $error_code=mms_service_error_code(diag),
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("write"),
         $value=data_to_string(data),
-        $success=F,
-        $diag=diag,
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $diag=common_fields$diag,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_object_path_fields(rec, name);
 
@@ -320,19 +351,20 @@ event VariableListReadRequest(c: connection, direction: string, invokeID: int, l
 
     if(!log_var_access) return;
 
+    local common_fields = mms_log_common_fields(c, direction, invokeID, mms_result_fields());
     local rec: VariableListAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="read_request",
         $listname=objectName_to_string(listname),
         $object_path="",
-        $result="success",
-        $error_code="none",
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("read_request"),
         $listindex=0,
-        $success=T,
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_varlist_object_path_fields(rec, listname);
 
@@ -343,20 +375,21 @@ event VariableListReadResponse(c: connection, direction: string, invokeID: int, 
 
     if(!log_var_access) return;
 
+    local common_fields = mms_log_common_fields(c, direction, invokeID, mms_result_fields());
     local rec: VariableListAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="read",
         $listname=objectName_to_string(listname),
         $object_path="",
-        $result="success",
-        $error_code="none",
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("read"),
         $listindex=listindex,
         $value=data_to_string(data),
-        $success=T,
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_varlist_object_path_fields(rec, listname);
 
@@ -367,20 +400,27 @@ event VariableListReadResponseError(c: connection, direction: string, invokeID: 
 
     if(!log_var_access) return;
 
+    local diag = remove_ns(cat(error));
+    local common_fields = mms_log_common_fields(
+        c,
+        direction,
+        invokeID,
+        mms_result_fields("failure", data_access_error_code(error), diag)
+    );
     local rec: VariableListAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="read",
         $listname=objectName_to_string(listname),
         $object_path="",
-        $result="failure",
-        $error_code=data_access_error_code(error),
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("read"),
         $listindex=listindex,
-        $success=F,
-        $diag=remove_ns(cat(error)),
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $diag=common_fields$diag,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_varlist_object_path_fields(rec, listname);
 
@@ -392,20 +432,26 @@ event VariableListReadConfirmedError(c: connection, direction: string, invokeID:
     if(!log_var_access) return;
 
     local diag = errorClass_to_string(response$serviceError);
+    local common_fields = mms_log_common_fields(
+        c,
+        direction,
+        invokeID,
+        mms_result_fields("failure", mms_service_error_code(diag), diag)
+    );
     local rec: VariableListAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="read",
         $listname=objectName_to_string(listname),
         $object_path="",
-        $result="failure",
-        $error_code=mms_service_error_code(diag),
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("read"),
         $listindex=listindex,
-        $success=F,
-        $diag=diag,
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $diag=common_fields$diag,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_varlist_object_path_fields(rec, listname);
 
@@ -415,20 +461,21 @@ event VariableListReadConfirmedError(c: connection, direction: string, invokeID:
 event VariableListWriteRequest(c: connection, direction: string, invokeID: int, listname: ObjectName, data: Data) {
     if(!log_var_access) return;
 
+    local common_fields = mms_log_common_fields(c, direction, invokeID, mms_result_fields());
     local rec: VariableListAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="write_request",
         $listname=objectName_to_string(listname),
         $object_path="",
-        $result="success",
-        $error_code="none",
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("write_request"),
         $listindex=0,
         $value=data_to_string(data),
-        $success=T,
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_varlist_object_path_fields(rec, listname);
 
@@ -439,20 +486,21 @@ event VariableListWriteResponse(c: connection, direction: string, invokeID: int,
 
     if(!log_var_access) return;
 
+    local common_fields = mms_log_common_fields(c, direction, invokeID, mms_result_fields());
     local rec: VariableListAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="write",
         $listname=objectName_to_string(listname),
         $object_path="",
-        $result="success",
-        $error_code="none",
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("write"),
         $listindex=listindex,
         $value=data_to_string(data),
-        $success=T,
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_varlist_object_path_fields(rec, listname);
 
@@ -463,21 +511,28 @@ event VariableListWriteResponseError(c: connection, direction: string, invokeID:
 
     if(!log_var_access) return;
 
+    local diag = remove_ns(cat(error));
+    local common_fields = mms_log_common_fields(
+        c,
+        direction,
+        invokeID,
+        mms_result_fields("failure", data_access_error_code(error), diag)
+    );
     local rec: VariableListAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="write",
         $listname=objectName_to_string(listname),
         $object_path="",
-        $result="failure",
-        $error_code=data_access_error_code(error),
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("write"),
         $listindex=listindex,
         $value=data_to_string(data),
-        $success=F,
-        $diag=remove_ns(cat(error)),
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $diag=common_fields$diag,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_varlist_object_path_fields(rec, listname);
 
@@ -489,21 +544,27 @@ event VariableListWriteConfirmedError(c: connection, direction: string, invokeID
     if(!log_var_access) return;
 
     local diag = errorClass_to_string(response$serviceError);
+    local common_fields = mms_log_common_fields(
+        c,
+        direction,
+        invokeID,
+        mms_result_fields("failure", mms_service_error_code(diag), diag)
+    );
     local rec: VariableListAccess = [
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
         $operation="write",
         $listname=objectName_to_string(listname),
         $object_path="",
-        $result="failure",
-        $error_code=mms_service_error_code(diag),
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
         $is_high_risk_operation=mms_is_high_risk_operation("write"),
         $listindex=listindex,
         $value=data_to_string(data),
-        $success=F,
-        $diag=diag,
-        $invoke_id=invokeID
+        $success=common_fields$success,
+        $diag=common_fields$diag,
+        $invoke_id=common_fields$invoke_id
     ];
     rec = add_varlist_object_path_fields(rec, listname);
 

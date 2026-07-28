@@ -1,5 +1,6 @@
 module mms;
 
+@load ./log_builder
 @load ./helper
 
 export {
@@ -57,9 +58,8 @@ event NamedVariableListAttributes(c: connection, direction: string, invokeID: in
 
     if(!log_varlist_attributes) return;
 
-    local endpoint_fields = mms_endpoint_fields(c$id);
     local object_fields = mms_object_path_fields(request);
-    local result_fields = mms_result_fields();
+    local common_fields = mms_log_common_fields(c, direction, invokeID, mms_result_fields());
 
     # 请求本身是 ObjectName，即变量列表名
     local list = objectName_to_string(request);
@@ -76,24 +76,24 @@ event NamedVariableListAttributes(c: connection, direction: string, invokeID: in
 
     # 组装日志记录（成功）
     local rec=record(
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
-        $src_ip=endpoint_fields$src_ip,
-        $dst_ip=endpoint_fields$dst_ip,
-        $src_port=endpoint_fields$src_port,
-        $dst_port=endpoint_fields$dst_port,
-        $direction=direction,
-        $invoke_id=invokeID,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
+        $src_ip=common_fields$src_ip,
+        $dst_ip=common_fields$dst_ip,
+        $src_port=common_fields$src_port,
+        $dst_port=common_fields$dst_port,
+        $direction=common_fields$direction,
+        $invoke_id=common_fields$invoke_id,
         $operation="get_named_variable_list_attributes",
         $object_path=object_fields$object_path,
-        $result=result_fields$result,
-        $error_code=result_fields$error_code,
-        $parse_status=result_fields$parse_status,
-        $parse_error=result_fields$parse_error,
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
+        $parse_status=common_fields$parse_status,
+        $parse_error=common_fields$parse_error,
         $list=list,
         $attributes=attributes,
-        $success=T
+        $success=common_fields$success
     );
 
     Log::write(LOG_VARLIST_ATTR, rec);
@@ -104,34 +104,38 @@ event NamedVariableListAttributesError (c: connection, direction: string, invoke
 
     if(!log_varlist_attributes) return;
 
-    local endpoint_fields = mms_endpoint_fields(c$id);
     local object_fields = mms_object_path_fields(request);
     local diag = errorClass_to_string(response$serviceError);
-    local result_fields = mms_result_fields("failure", mms_service_error_code(diag), diag);
+    local common_fields = mms_log_common_fields(
+        c,
+        direction,
+        invokeID,
+        mms_result_fields("failure", mms_service_error_code(diag), diag)
+    );
 
     # 请求本身是 ObjectName，即变量列表名
     local list = objectName_to_string(request);
 
     # 组装日志记录（失败），diag 为服务错误码
     local rec=record(
-        $ts=network_time(),
-        $uid=c$uid,
-        $id=c$id,
-        $src_ip=endpoint_fields$src_ip,
-        $dst_ip=endpoint_fields$dst_ip,
-        $src_port=endpoint_fields$src_port,
-        $dst_port=endpoint_fields$dst_port,
-        $direction=direction,
-        $invoke_id=invokeID,
+        $ts=common_fields$ts,
+        $uid=common_fields$uid,
+        $id=common_fields$id,
+        $src_ip=common_fields$src_ip,
+        $dst_ip=common_fields$dst_ip,
+        $src_port=common_fields$src_port,
+        $dst_port=common_fields$dst_port,
+        $direction=common_fields$direction,
+        $invoke_id=common_fields$invoke_id,
         $operation="get_named_variable_list_attributes",
         $object_path=object_fields$object_path,
-        $result=result_fields$result,
-        $error_code=result_fields$error_code,
-        $parse_status=result_fields$parse_status,
-        $parse_error=result_fields$parse_error,
+        $result=common_fields$result,
+        $error_code=common_fields$error_code,
+        $parse_status=common_fields$parse_status,
+        $parse_error=common_fields$parse_error,
         $list=list,
-        $success=F,
-        $diag=diag
+        $success=common_fields$success,
+        $diag=common_fields$diag
     );
 
     Log::write(LOG_VARLIST_ATTR, rec);
